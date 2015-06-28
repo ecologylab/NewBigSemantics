@@ -1,0 +1,16 @@
+{
+  "name": "bigsemantics",
+  "version": "2.0.0",
+  "description": "The new BigSemantics.",
+  "main": "bigsemantics.js",
+  "dependencies": {
+    "request": "^2.58.0",
+    "socket.io": "^1.3.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Interface Ecology Lab",
+  "license": "ISC"
+}
