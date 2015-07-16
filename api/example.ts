@@ -41,3 +41,30 @@ function example1(clipping, renderer)
   }
 }
 
+// in browser extension
+
+var bs = new BigSemantics({ file: 'repo.json' });
+function example_onMessage(message: Request)
+{
+  if (message.method == 'loadMetadata')
+  {
+    bs.onReady(function(err, bs) {
+      if (err)
+      {
+        // send error message back ...
+        return;
+      }
+
+      bs.loadMetadata(message.params['location'], message.params['options'], function(err, metadata) {
+        if (err)
+        {
+          // send error message back ...
+          return;
+        }
+        
+        var resp = { method: 'loadMetadata' }; // TODO assemble response object
+        // send resp back ...
+      })
+    });
+  }
+}
