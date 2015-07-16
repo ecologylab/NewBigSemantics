@@ -3,6 +3,7 @@ The new BigSemantics with a focus on supporting web-based applications.
 
 ## Build
 
+1. <code>cd src</code>.
 1. Install [Node](https://github.com/joyent/node).
 2. Install [TypeScript](https://github.com/Microsoft/TypeScript) (1.5.0-beta or above).
 3. Install [TSD](http://definitelytyped.org/tsd/).
