@@ -43,7 +43,7 @@ interface IBigSemantics
     callback: (err: Error, mmd: MetaMetadata)=>void
   ): void;
 
-  // Return the form of location after filtered by corresponding mmd.
+  // Get the form of location after filtered by corresponding mmd.
   canonicalizeLocation(
     location: string,
     options: any,
