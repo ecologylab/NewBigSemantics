@@ -19,7 +19,7 @@ interface Metadata
 interface Request
 {
   method: string,
-  params?: any,
+  params?: any, // '?' means optional
   callbackId?: any
 }
 
