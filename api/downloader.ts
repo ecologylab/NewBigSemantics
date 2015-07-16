@@ -44,8 +44,18 @@ class Downloader
     var downloader = this;
     function doHttpGet(): void
     {
+      var domain = ''; // TODO get domain out of location
       if (downloader.intervals[domain])
       {
+        if (downloader.lastHits[domain])
+        {
+          var elapsed = Date.now() - downloader.lastHits[domain];
+          if (elapsed < downloader.intervals[domain])
+          {
+            setTimeout(doHttpGet, downloader.intervals[domain] - elapsed); // if we need to delay it
+            return;
+          }
+        }
         downloader.lastHits[domain] = Date.now();
       }
       var response = { location: location, code: 0 };
@@ -60,24 +70,7 @@ class Downloader
       // we'll need to implement cache.
     }
 
-    var domain = ''; // TODO get domain out of location
-    if (this.intervals[domain])
-    {
-      if (this.lastHits[domain])
-      {
-        var elapsed = Date.now() - this.lastHits[domain];
-        if (elapsed < this.intervals[domain])
-        {
-          setTimeout(doHttpGet, Date.now() - elapsed); // if we need to delay it
-          return;
-        }
-      }
-      else
-      {
-        this.lastHits[domain] = Date.now();
-      }
-    }
-    doHttpGet(); // if we can do immediately
+    doHttpGet();
   }
 
 }
