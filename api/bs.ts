@@ -111,6 +111,24 @@ class BigSemantics implements IBigSemantics
     self.downloader.httpGet(location, null, function(err, response) {
       if (err) { callback(err, null); return; }
 
+      if (options.mmd)
+      {
+        var metadata = self.extractor(response, options.mmd, self.repoMan);
+        callback(null, metadata);
+        return;
+      }
+      
+      if (options.mmdName)
+      {
+        var mmdOpts = {}; // fill out if necessary
+        self.repoMan.loadMmd(options.mmdName, mmdOpts, function(err, mmd) {
+          if (err) { callback(err, null); return; }
+          
+          var metadata = self.extractor(response, mmd, self.repoMan);
+          callback(null, metadata);
+        });
+        return;
+      }
       var mmdOpts = { page: response.page };
       self.repoMan.selectMmd(response.location, mmdOpts, function(err, mmd) {
         if (err) { callback(err, null); return; }
