@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "sourceMap": true,
+    "outDir": "build"
+  },
+  "files": [
+    "src/phantomteer.ts",
+    "src/bridge.ts",
+    "src/test-phantomteer.ts"
+  ]
+}
+

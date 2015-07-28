@@ -10,34 +10,27 @@ import http = require('http');
 import socketio = require('socket.io');
 import child_process = require('child_process');
 
-class Error {
-  constructor(public code: number,
-              public message: string,
-              public data?: any) {}
+interface Request {
+  id: string;        // request id
+  pageId?: string;   // page id
+  method: string;
+  params?: any;
 }
 
-class Request {
-  constructor(public rid: string,    // request id
-              public pid: string,    // page id
-              public method: string,
-              public params?: any) {}
-}
-
-class Response {
-  constructor(public rid: string,    // request id
-              public pid: string,    // page id
-              public result: any,
-              public error?: Error) {}
+interface Response {
+  id: string;        // request id
+  pageId?: string;   // page id
+  result?: any;
+  error?: any;
 }
 
 interface Callback {
-  (error: any, ...args: any[]): void;
+  (err: any, ...args: any[]): void;
 }
 
 interface Record {
   req: Request;
   callback: Callback;
-  result?: any;
 }
 
 export class Controller {
@@ -54,10 +47,9 @@ export class Controller {
 
       socket.on('response', function(msg: Response) {
         console.log("Response: " + JSON.stringify(msg));
-        var record = ctrl.records[msg.rid];
+        var record = ctrl.records[msg.id];
         if (record) {
-          var result = record.result ? record.result : msg.result;
-          ctrl.records[msg.rid].callback(msg.error, result);
+          record.callback(msg.error, msg.result);
         }
       });
 
@@ -67,29 +59,37 @@ export class Controller {
     });
   }
 
-  nextReq(pid: string, method: string, params?: any): Request {
-    return new Request(''+this.reqId++, pid, method, params);
+  newReqId(): string { return String(this.reqId++); }
+
+  newPageId(): string { return String(this.pageId++); }
+
+  sendCmd(cmd: Request, callback: Callback): void {
+    // currently it emits to all clients.
+    // a single client might be good enough -- it can open multiple pages.
+    // in the future, we may want a phantom farm.
+    this.io.emit('cmd', cmd);
+    this.records[cmd.id] = { req: cmd, callback: callback };
   }
 
-  private nextPageId(): string { return '' + this.pageId++; }
-
-  recordCallback(req: Request, callback: Callback, result?: any) {
-    this.records[req.rid] = { req: req, callback: callback, result: result };
+  createPage(callback: (err, page)=>void): void {
+    var req = {
+      id: this.newReqId(),
+      pageId: this.newPageId(),
+      method: 'createPage'
+    };
+    var page = new Page(this, req.pageId);
+    this.sendCmd(req, function(err) {
+      if (err) { callback(err, null); }
+      else { callback(null, page); }
+    });
   }
 
-  emitCmd(msg: Request): void { this.io.emit('cmd', msg); }
-
-  createPage(callback: Callback): void {
-    var req = this.nextReq(this.nextPageId(), 'createPage');
-    var page = new Page(this, req.pid);
-    this.recordCallback(req, callback, page);
-    this.emitCmd(req);
-  }
-
-  exit(callback: Callback): void {
-    var req = this.nextReq(null, 'exit');
-    this.recordCallback(req, callback);
-    this.emitCmd(req);
+  exit(callback: (err)=>void): void {
+    var req = {
+      id: this.newReqId(),
+      method: 'exit'
+    };
+    this.sendCmd(req, callback);
   }
 
   shutdown(): void {
@@ -104,35 +104,44 @@ export class Page {
 
   // open() {}
 
-  setContent(content: string, url: string, callback: Callback): void {
-    var req = this.controller.nextReq(this.id, 'setContent', {
-      content: content,
-      url: url
-    });
-    this.controller.recordCallback(req, callback);
-    this.controller.emitCmd(req);
+  setContent(content: string, url: string, callback: (err)=>void): void {
+    var req = {
+      id: this.controller.newReqId(),
+      pageId: this.id,
+      method: 'setContent',
+      params: { content: content, url: url }
+    };
+    this.controller.sendCmd(req, callback);
   }
 
   // injectJs() {}
 
+  // The last arg is the callback!
   evaluate(func: (...params: any[])=>any, ...args: any[]): void {
-    var req = this.controller.nextReq(this.id, 'evaluate', {
-      func: func.toString(),
-      args: args.slice(0, args.length-1)
-    });
-    this.controller.recordCallback(req, args[args.length-1]);
-    this.controller.emitCmd(req);
+    var req = {
+      id: this.controller.newReqId(),
+      pageId: this.id,
+      method: 'evaluate',
+      params: { func: func.toString(), args: args.slice(0, args.length-1) }
+    };
+    var callback = args[args.length-1];
+    this.controller.sendCmd(req, callback);
   }
 
-  close(callback: Callback): void {
-    var req = this.controller.nextReq(this.id, 'close');
-    this.controller.recordCallback(req, callback);
-    this.controller.emitCmd(req);
+  close(callback: (err)=>void): void {
+    var req = {
+      id: this.controller.newReqId(),
+      pageId: this.id,
+      method: 'close'
+    };
+    this.controller.sendCmd(req, callback);
   }
 }
 
-export function createController(port: number,
-                                 callback: Callback) {
+export function createController(host: string,
+                                 port: number,
+                                 options: any,
+                                 callback: (err, ctrl)=>void) {
   var httpServer = http.createServer(function(request, response) {
       response.writeHead(200, {"Content-Type": "text/html"});
       response.end(
@@ -152,15 +161,16 @@ export function createController(port: number,
   });
   var io = socketio(httpServer);
   var controller = new Controller(httpServer, io);
-  httpServer.listen(port, function() {      
+  httpServer.listen(port, function() {
     callback(null, controller);
   });
 }
 
-
-export function spawnPhantom(port: number,
-                             callback: Callback,
-                             options: any = {}) {
+export function spawnPhantom(host: string,
+                             port: number,
+                             options: any,
+                             callback: (err, process)=>void) {
+  if (options === undefined || options == null) { options = {}; }
   if (options.phantomPath === undefined) { options.phantomPath = 'phantomjs'; }
   if (options.params === undefined) { options.params = {}; }
 
@@ -168,86 +178,8 @@ export function spawnPhantom(port: number,
   for (var param in options.params) {
     args.push('--' + param + '=' + options.params[param]);
   }
-  args = args.concat([__dirname + '/bridge.js', port]);
-  console.log("About to spawn Phantom, args: " + args);
+  args = args.concat([__dirname + '/bridge.js', host, port]);
   var phantom = child_process.spawn(options.phantomPath, args);
-
-  var callbackDone = false;
-  phantom.stdout.on('data', function(data) {
-    console.log("Phantom out: " + data);
-    if (!callbackDone && data && data.toString().indexOf('success') >= 0) {
-      callbackDone = true;
-      callback(null);
-    }
-  });
-  phantom.stderr.on('data', function(data) {
-    console.warn("Phantom err: " + data);
-  });
-
-  phantom.on('error', function(error) {
-    console.log("Error spawning Phantom: " + error);
-    if (!callbackDone) {
-      callbackDone = true;
-      callback(error);
-    }
-  });
-  phantom.on('exit', function (code, signal) {
-    console.log("Phantom Exitted with code " + code);
-    if (signal) {
-      console.log("    Received signal: " + signal);
-    }
-    if (!callbackDone) {
-      callbackDone = true;
-      callback({ message: "Process unexpectedly exitted.", code: code });
-    }
-  });
+  setTimeout(function() { callback(null, phantom); }, 1000);
 }
-
-export function createControllerWithPhantom(port: number,
-                                            callback: Callback,
-                                            options: any = {}) {
-  createController(port, function(error, controller) {
-    if (error) {
-      console.log("Failed to create controller.");
-      callback(error);
-    } else {
-      console.log("Controller created.");
-      spawnPhantom(port, function(error) {
-        if (error) {
-          console.log("Failed to spawn Phantom.");
-          callback(error);
-        } else {
-          callback(null, controller);
-        }
-      });
-    }
-  });
-}
-
-var html = "<html><head><title>hello world</title></head><body>this is the body</body></html>";
-var url = "about:test";
-var xpath = "//title";
-var func = function(xpath) {
-  var result =
-    document.evaluate(xpath, document, null, XPathResult.STRING_TYPE, null);
-  return result.stringValue;
-};
-createControllerWithPhantom(8888, function(error, controller) {
-  controller.createPage(function(error, page) {
-    console.log("Page created, id = " + page.getId());
-    page.setContent(html, url, function(error) {
-      console.log("Content set.");
-      page.evaluate(func, xpath, function(error, result) {
-        console.log("Extracted scalar: " + result);
-        page.close(function(error) {
-          console.log("Page closed.");
-          controller.exit(function(error) {
-            console.log("Phantom exitted.");
-            controller.shutdown();
-          });
-        });
-      });
-    });
-  });
-});
 

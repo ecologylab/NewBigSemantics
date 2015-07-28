@@ -1,18 +1,22 @@
 // Bridge script running inside PhantomJS.
 
 var system = require('system');
-var port = system.args[1];
+var host = system.args[1];
+var port = system.args[2];
+console.log("Host: " + host);
 console.log("Port: " + port);
 
 var webpage = require('webpage');
 var controlPage = webpage.create();
 
 controlPage.onResourceError = function(error) {
+  // TODO send message back to controller
   console.log("Control Page Resource Error: " + error.url);
   console.log("  Reason: " + error.errorCode + " " + error.errorString);
 };
  
 controlPage.onError = function(msg, trace) {
+  // TODO send message back to controller
   console.log("Control Page Error: " + msg);
   if (trace) {
     trace.forEach(function(t) {
@@ -23,10 +27,11 @@ controlPage.onError = function(msg, trace) {
 };
 
 controlPage.onConsoleMessage = function(msg) {
+  // TODO send message back to controller
   console.log("Control Page Msg: " + msg);
 };
 
-emit = function(name, msg) {
+var emit = function(name, msg) {
   controlPage.evaluate(function(name, msg) {
     window.socket.emit(name, msg);
   }, name, msg);
@@ -48,31 +53,29 @@ controlPage.onAlert = function(msgStr) {
     console.warn("Method required.");
     return;
   }
-  if (!msg.rid || (!msg.pid && msg.method != 'exit')) {
+  if (!msg.id || (!msg.pageId && msg.method != 'exit')) {
     console.warn("Request ID and Page ID are required.");
     return;
   }
 
-  var resp = { rid: msg.rid, pid: msg.pid };
+  var resp: any = { id: msg.id, pageId: msg.pageId };
   if (msg.method == 'createPage') {
-    if (!pages[msg.pid]) {
+    if (!pages[msg.pageId]) {
       var page = webpage.create();
-      pages[msg.pid] = page;
+      pages[msg.pageId] = page;
     } else {
       resp.error = {
-        code: 1000,
-        message: "Page already created: " + msg.pid
+        message: "Page already exists: " + msg.pageId
       };
     }
   } else if (msg.method == 'exit') {
-    setTimeout(function() { phantom.exit(0); }, 1000);
+    setTimeout(function() { phantom.exit(0); }, 0);
   } else {
     // page commands
-    var page = pages[msg.pid];
+    var page = pages[msg.pageId];
     if (!page) {
       resp.error = {
-        code: 1001,
-        message: "Page not found: " + msg.pid
+        message: "Page not found: " + msg.pageId
       };
     } else {
       if (msg.method == 'setContent') {
@@ -80,7 +83,7 @@ controlPage.onAlert = function(msgStr) {
       } else if (msg.method == 'evaluate') {
         var args = [];
         var func = null;
-        eval("func = " + msg.params.func);
+        eval("func = " + msg.params.func); // effects local 'func'
         args.push(func);
         if (msg.params.args) {
           for (var i = 0; i < msg.params.args.length; ++i) {
@@ -90,14 +93,14 @@ controlPage.onAlert = function(msgStr) {
         resp.result = page.evaluate.apply(page, args);
       } else if (msg.method == 'close') {
         page.close();
-        pages[msg.pid] = undefined;
+        pages[msg.pageId] = undefined;
       }
     }
   }
   emit('response', resp);
 };
 
-controlPage.open("http://localhost:8888", function(status) {
+controlPage.open("http://" + host + ":" + port, function(status) {
   console.log("Control page status: " + status);
 });
 

@@ -5,7 +5,8 @@
   "main": "bigsemantics.js",
   "dependencies": {
     "request": "^2.58.0",
-    "socket.io": "^1.3.5"
+    "socket.io": "^1.3.5",
+    "winston": "^1.0.1"
   },
   "devDependencies": {},
   "scripts": {

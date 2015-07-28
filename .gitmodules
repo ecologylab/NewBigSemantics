@@ -1,0 +1,3 @@
+[submodule "src/BigSemanticsJavaScript"]
+	path = src/BigSemanticsJavaScript
+	url = git@github.com:ecologylab/BigSemanticsJavaScript.git
