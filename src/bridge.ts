@@ -1,5 +1,7 @@
 // Bridge script running inside PhantomJS.
 
+declare var phantom: any; // to make TS compiler happy
+
 var system = require('system');
 var host = system.args[1];
 var port = system.args[2];
@@ -33,7 +35,7 @@ controlPage.onConsoleMessage = function(msg) {
 
 var emit = function(name, msg) {
   controlPage.evaluate(function(name, msg) {
-    window.socket.emit(name, msg);
+    window['socket'].emit(name, msg);
   }, name, msg);
 }
 
@@ -68,8 +70,10 @@ controlPage.onAlert = function(msgStr) {
         message: "Page already exists: " + msg.pageId
       };
     }
+    emit('response', resp);
   } else if (msg.method == 'exit') {
     setTimeout(function() { phantom.exit(0); }, 0);
+    emit('response', resp);
   } else {
     // page commands
     var page = pages[msg.pageId];
@@ -77,9 +81,20 @@ controlPage.onAlert = function(msgStr) {
       resp.error = {
         message: "Page not found: " + msg.pageId
       };
+      emit('response', resp);
     } else {
       if (msg.method == 'setContent') {
         page.setContent(msg.params.content, msg.params.url);
+        emit('response', resp);
+      } else if (msg.method == 'open') {
+        page.open(msg.params.url, msg.params.settings, function(status) {
+          resp.result = status;
+          emit('response', resp);
+        });
+      } else if (msg.method == 'injectJs') {
+        var filePath = msg.params.filePath;
+        resp.result = page.injectJs(filePath);
+        emit('response', resp);
       } else if (msg.method == 'evaluate') {
         var args = [];
         var func = null;
@@ -91,13 +106,14 @@ controlPage.onAlert = function(msgStr) {
           }
         }
         resp.result = page.evaluate.apply(page, args);
+        emit('response', resp);
       } else if (msg.method == 'close') {
         page.close();
         pages[msg.pageId] = undefined;
+        emit('response', resp);
       }
     }
   }
-  emit('response', resp);
 };
 
 controlPage.open("http://" + host + ":" + port, function(status) {

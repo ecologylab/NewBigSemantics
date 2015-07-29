@@ -2,43 +2,75 @@
 
 /// <reference path='typings/tsd.d.ts' />
 
-import request = require('request');
+import * as request from 'request';
 
 export interface Response {
   location: string;
   otherLocations?: Array<string>;
-  content: string;
+
+  code: number;
+  contentType?: string;
+  charset?: string;
+
+  entity?: Object;
+  xml?: Object;
+  text?: string;
 }
 
 export interface Callback {
   (error: string, resp: Response): void;
 }
 
-export interface Downloader {
-  download(url: string, callback: Callback): void;
+export interface IDownloader {
+  httpGet(location: string, options: Object, callback: Callback): void;
 }
 
-export class DefaultDownloader implements Downloader {
-  download(url: string, callback: Callback) {
-    request(url, function(error, response, body) {
-      if (error == null) {
-        callback(null, { location: url, response: response, content: body });
-      } else {
-        callback(error, null);
+export class BaseDownloader implements IDownloader {
+
+  static parseContentType(resp: Response, contentTypeHeader: string) {
+    var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
+    if (matches) {
+      resp.contentType = matches[1];
+      resp.charset = matches[3];
+    }
+  }
+
+  static addOtherLocation(resp: Response, otherLocation: string): boolean {
+    if (otherLocation && otherLocation.length > 0) {
+      if (otherLocation != resp.location) {
+        if (!resp.otherLocations) {
+          resp.otherLocations = [];
+        }
+        if (resp.otherLocations.indexOf(otherLocation) < 0) {
+          var prevLocation = resp.location;
+          resp.location = otherLocation;
+          resp.otherLocations.push(prevLocation);
+          return true;
+        }
       }
+    }
+    return false;
+  }
+
+  httpGet(location, options, callback) {
+    var result: Response = { location: location, code: 0 };
+
+    var r = request(location, function(err, resp, body) {
+      if (err) { callback(err, null); return; }
+
+      result.location = r['uri'].href;
+      result.code = resp.statusCode;
+      result.text = body;
+      if (resp.headers['content-type']) {
+        BaseDownloader.parseContentType(result, resp.headers['content-type']);
+      }
+      callback(null, result);
+    });
+    // collect redirects:
+    r.on('redirect', function() {
+      BaseDownloader.addOtherLocation(result, r['uri'].href);
     });
   }
+
 }
-
-// for testing:
-
-var downloader = new DefaultDownloader();
-var callback: Callback = function(error: string, result: Response) {
-    if (error == null) {
-      console.log(result.content);
-    } else {
-      console.log("Error: " + error);
-    }
-  };
-downloader.download('http://dl.acm.org/citation.cfm?id=2557083', callback);
 

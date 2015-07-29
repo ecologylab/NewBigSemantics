@@ -6,15 +6,16 @@
 
 /// <reference path='typings/tsd.d.ts' />
 
-import http = require('http');
-import socketio = require('socket.io');
-import child_process = require('child_process');
+import * as proc from 'child_process';
+import * as http from 'http';
+import * as path from 'path';
+import * as socketio from 'socket.io';
 
 interface Request {
   id: string;        // request id
   pageId?: string;   // page id
   method: string;
-  params?: any;
+  params?: Object;
 }
 
 interface Response {
@@ -71,7 +72,7 @@ export class Controller {
     this.records[cmd.id] = { req: cmd, callback: callback };
   }
 
-  createPage(callback: (err, page)=>void): void {
+  createPage(callback: (err, page: Page)=>void): void {
     var req = {
       id: this.newReqId(),
       pageId: this.newPageId(),
@@ -102,19 +103,32 @@ export class Page {
 
   getId(): string { return this.id; }
 
-  // open() {}
-
-  setContent(content: string, url: string, callback: (err)=>void): void {
-    var req = {
+  newReq(method: string, params?: Object): Request {
+    return {
       id: this.controller.newReqId(),
-      pageId: this.id,
-      method: 'setContent',
-      params: { content: content, url: url }
+      pageId: this.getId(),
+      method: method,
+      params: params
     };
+  }
+
+  open(url: string, settings: Object, callback: (err, status: string)=>void) {
+    var req = this.newReq('open', { url: url, settings: settings });
     this.controller.sendCmd(req, callback);
   }
 
-  // injectJs() {}
+  setContent(content: string, url: string, callback: (err)=>void): void {
+    var req = this.newReq('setContent', { content: content, url: url });
+    this.controller.sendCmd(req, callback);
+  }
+
+  injectJs(filePath: string, callback: (err, status: boolean)=>void): void {
+    if (filePath) {
+      var absPath = path.resolve(filePath);
+      var req = this.newReq('injectJs', { filePath: absPath });
+      this.controller.sendCmd(req, callback);
+    }
+  }
 
   // The last arg is the callback!
   evaluate(func: (...params: any[])=>any, ...args: any[]): void {
@@ -141,7 +155,7 @@ export class Page {
 export function createController(host: string,
                                  port: number,
                                  options: any,
-                                 callback: (err, ctrl)=>void) {
+                                 callback: (err, ctrl: Controller)=>void) {
   var httpServer = http.createServer(function(request, response) {
       response.writeHead(200, {"Content-Type": "text/html"});
       response.end(
@@ -169,7 +183,7 @@ export function createController(host: string,
 export function spawnPhantom(host: string,
                              port: number,
                              options: any,
-                             callback: (err, process)=>void) {
+                             callback: (err, process: proc.ChildProcess)=>void) {
   if (options === undefined || options == null) { options = {}; }
   if (options.phantomPath === undefined) { options.phantomPath = 'phantomjs'; }
   if (options.params === undefined) { options.params = {}; }
@@ -179,7 +193,7 @@ export function spawnPhantom(host: string,
     args.push('--' + param + '=' + options.params[param]);
   }
   args = args.concat([__dirname + '/bridge.js', host, port]);
-  var phantom = child_process.spawn(options.phantomPath, args);
+  var phantom = proc.spawn(options.phantomPath, args);
   setTimeout(function() { callback(null, phantom); }, 1000);
 }
 
