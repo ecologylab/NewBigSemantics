@@ -1,33 +1,13 @@
 // Downloader
 
 /// <reference path='typings/tsd.d.ts' />
+/// <reference path='./api/bigsemantics.d.ts' />
 
 import * as request from 'request';
 
-export interface Response {
-  location: string;
-  otherLocations?: Array<string>;
+export class BaseDownloader implements bigsemantics.IDownloader {
 
-  code: number;
-  contentType?: string;
-  charset?: string;
-
-  entity?: Object;
-  xml?: Object;
-  text?: string;
-}
-
-export interface Callback {
-  (error: string, resp: Response): void;
-}
-
-export interface IDownloader {
-  httpGet(location: string, options: Object, callback: Callback): void;
-}
-
-export class BaseDownloader implements IDownloader {
-
-  static parseContentType(resp: Response, contentTypeHeader: string) {
+  static parseContentType(resp: bigsemantics.Response, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
     if (matches) {
       resp.contentType = matches[1];
@@ -35,7 +15,7 @@ export class BaseDownloader implements IDownloader {
     }
   }
 
-  static addOtherLocation(resp: Response, otherLocation: string): boolean {
+  static addOtherLocation(resp: bigsemantics.Response, otherLocation: string): boolean {
     if (otherLocation && otherLocation.length > 0) {
       if (otherLocation != resp.location) {
         if (!resp.otherLocations) {
@@ -53,7 +33,7 @@ export class BaseDownloader implements IDownloader {
   }
 
   httpGet(location, options, callback) {
-    var result: Response = { location: location, code: 0 };
+    var result: bigsemantics.Response = { location: location, code: 0 };
 
     var r = request(location, function(err, resp, body) {
       if (err) { callback(err, null); return; }
@@ -73,4 +53,3 @@ export class BaseDownloader implements IDownloader {
   }
 
 }
-

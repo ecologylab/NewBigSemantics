@@ -13,24 +13,23 @@ var controlPage = webpage.create();
 
 controlPage.onResourceError = function(error) {
   // TODO send message back to controller
-  console.log("Control Page Resource Error: " + error.url);
-  console.log("  Reason: " + error.errorCode + " " + error.errorString);
+  console.warn("Control Page Resource Error: ", error);
 };
  
 controlPage.onError = function(msg, trace) {
   // TODO send message back to controller
-  console.log("Control Page Error: " + msg);
+  console.warn("Control Page Error: ", msg);
   if (trace) {
     trace.forEach(function(t) {
-      console.log("    " + t.file + ":" + t.line
-                  + (t.function ? " (in function '" + t.function + "')" : ""));
+      console.warn("    " + t.file + ":" + t.line
+                   + (t.function ? " (in function '" + t.function + "')" : ""));
     });
   }
 };
 
 controlPage.onConsoleMessage = function(msg) {
   // TODO send message back to controller
-  console.log("Control Page Msg: " + msg);
+  console.log("Control Page Message: ", msg);
 };
 
 var emit = function(name, msg) {
@@ -42,21 +41,21 @@ var emit = function(name, msg) {
 var pages = {};
 
 controlPage.onAlert = function(msgStr) {
-  console.log("Control Page Alert: " + msgStr);
+  console.log("Control Page Alert: ", msgStr);
 
   var msg = null;
   try {
     msg = JSON.parse(msgStr);
   } catch (error) {
-    console.warn("Ignoring unparsable message: " + msgStr);
+    console.warn("Ignoring unparsable message: ", msgStr);
     return;
   }
   if (!msg.method) {
-    console.warn("Method required.");
+    console.warn("Method required: ", msgStr);
     return;
   }
   if (!msg.id || (!msg.pageId && msg.method != 'exit')) {
-    console.warn("Request ID and Page ID are required.");
+    console.warn("Request ID and Page ID required: ", msgStr);
     return;
   }
 
@@ -111,6 +110,11 @@ controlPage.onAlert = function(msgStr) {
         page.close();
         pages[msg.pageId] = undefined;
         emit('response', resp);
+      } else if (msg.method == 'onLoadFinished') {
+        page.onLoadFinished = function(status) {
+          resp.result = status;
+          emit('event', resp);
+        }
       }
     }
   }

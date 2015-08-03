@@ -5,9 +5,17 @@
     "outDir": "build"
   },
   "files": [
-    "src/phantomteer.ts",
-    "src/bridge.ts",
-    "src/test-phantomteer.ts"
+    "src/downloader.ts",
+    "src/phantom-extractor.ts",
+
+    "src/phantom-master.ts",
+    "src/phantom-bridge.ts",
+
+    "src/api/test-simpl.ts",
+    "src/test-downloader.ts",
+    "src/test-phantom-master.ts",
+
+    "src/first-test.ts"
   ]
 }
 
