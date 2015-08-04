@@ -9,18 +9,20 @@ import BigSemantics = require('./BigSemanticsJavaScript/bsjsCore/BigSemantics');
 
 var url = 'http://www.amazon.com/Coaster-900280-Snack-Burnished-Copper/dp/B004J8PAPE/';
 
-var repoMan = new RepoMan({
-  file: './BigSemanticsJavaScript/bsjsCore/simpl/test/testRepo.json'
-});
+var repoSource: any = {
+  url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'
+};
+var options: any = {
+  downloader: new downloader.BaseDownloader()
+};
+
+var repoMan = new RepoMan(repoSource, options);
 repoMan.onReady(function(err, repoMan) {
   if (err) { console.error(err); return; }
 
   pd.createPhantomExtractor('localhost', 8880, null, function(err, extractor) {
-    var options = {
-      downloader: new downloader.BaseDownloader(),
-      extractor: extractor,
-      repoMan: repoMan
-    };
+    options.extractor = extractor;
+    options.repoMan = repoMan;
 
     var bs = new BigSemantics(null, options);
     bs.onReady(function(err, bs) {

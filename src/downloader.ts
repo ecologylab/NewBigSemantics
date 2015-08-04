@@ -3,7 +3,8 @@
 /// <reference path='typings/tsd.d.ts' />
 /// <reference path='./api/bigsemantics.d.ts' />
 
-import * as request from 'request';
+import request = require('request');
+import ParsedURL = require('./BigSemanticsJavaScript/bsjsCore/ParsedURL');
 
 export class BaseDownloader implements bigsemantics.IDownloader {
 
@@ -33,9 +34,21 @@ export class BaseDownloader implements bigsemantics.IDownloader {
   }
 
   httpGet(location, options, callback) {
+    var purl = new ParsedURL(location);
     var result: bigsemantics.Response = { location: location, code: 0 };
 
-    var r = request(location, function(err, resp, body) {
+    var rOpts: any = {
+      method: 'GET',
+      url: location,
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml,application/xml,application/json,*/*',
+        'Host': purl.host,
+      }
+    };
+    if (options && options.userAgent) {
+      rOpts.headers['User-Agent'] = options.userAgent;
+    }
+    var r = request(rOpts, function(err, resp, body) {
       if (err) { callback(err, null); return; }
 
       result.location = r['uri'].href;
