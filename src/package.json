@@ -4,11 +4,15 @@
   "description": "The new BigSemantics.",
   "main": "bigsemantics.js",
   "dependencies": {
+    "koa": "^0.21.0",
     "request": "^2.58.0",
     "socket.io": "^1.3.5",
     "winston": "^1.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.0",
+    "gulp-shell": "^0.4.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
