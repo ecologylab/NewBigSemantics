@@ -2,7 +2,7 @@
   "name": "bigsemantics",
   "version": "2.0.0",
   "description": "The new BigSemantics.",
-  "main": "bigsemantics.js",
+  "main": "build/first-test.js",
   "dependencies": {
     "koa": "^0.21.0",
     "request": "^2.58.0",

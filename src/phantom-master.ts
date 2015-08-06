@@ -4,7 +4,7 @@
 // Originally from: https://github.com/alexscheelmeyer/node-phantom
 // Modified by: Yin Qu (me.yin.qu@gmail.com)
 
-/// <reference path='typings/tsd.d.ts' />
+/// <reference path='../typings/tsd.d.ts' />
 
 import proc = require('child_process');
 import http = require('http');

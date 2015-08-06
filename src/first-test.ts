@@ -4,8 +4,8 @@
 
 import downloader = require('./downloader');
 import pd = require('./phantom-extractor');
-import RepoMan = require('./BigSemanticsJavaScript/bsjsCore/RepoMan');
-import BigSemantics = require('./BigSemanticsJavaScript/bsjsCore/BigSemantics');
+import RepoMan = require('../bigsemantics/bsjsCore/RepoMan');
+import BigSemantics = require('../bigsemantics/bsjsCore/BigSemantics');
 
 var url = 'http://www.amazon.com/Coaster-900280-Snack-Burnished-Copper/dp/B004J8PAPE/';
 

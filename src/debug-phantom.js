@@ -48,11 +48,11 @@ page.onError = function(msg, trace) {
 
 function debugSetContent() {
   var bsjsFiles = [
-    './BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
-    './BigSemanticsJavaScript/bsjsCore/BSUtils.js',
-    './BigSemanticsJavaScript/bsjsCore/FieldOps.js',
-    './BigSemanticsJavaScript/bsjsCore/FieldParsers.js',
-    './BigSemanticsJavaScript/bsjsCore/Extractor.js'
+    '../bigsemantics/bsjsCore/simpl/simplBase.js',
+    '../bigsemantics/bsjsCore/BSUtils.js',
+    '../bigsemantics/bsjsCore/FieldOps.js',
+    '../bigsemantics/bsjsCore/FieldParsers.js',
+    '../bigsemantics/bsjsCore/Extractor.js'
   ];
 
   var fs = require('fs');

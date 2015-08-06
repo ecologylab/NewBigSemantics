@@ -1,14 +1,14 @@
 // A demo bigsemantics service
 
-/// <reference path="typings/tsd.d.ts" />
+/// <reference path="../typings/tsd.d.ts" />
 
 var http = require('http');
 var koa = require('koa');
 
 var downloader = require('./downloader');
 var pd = require('./phantom-extractor');
-var RepoMan = require('./BigSemanticsJavaScript/bsjsCore/RepoMan');
-var BigSemantics = require('./BigSemanticsJavaScript/bsjsCore/BigSemantics');
+var RepoMan = require('../bigsemantics/bsjsCore/RepoMan');
+var BigSemantics = require('../bigsemantics/bsjsCore/BigSemantics');
 
 var repoSource = {
   url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'

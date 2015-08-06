@@ -1,10 +1,10 @@
 // Downloader
 
-/// <reference path='typings/tsd.d.ts' />
+/// <reference path='../typings/tsd.d.ts' />
 /// <reference path='./api/bigsemantics.d.ts' />
 
 import request = require('request');
-import ParsedURL = require('./BigSemanticsJavaScript/bsjsCore/ParsedURL');
+import ParsedURL = require('../bigsemantics/bsjsCore/ParsedURL');
 
 export class BaseDownloader implements bigsemantics.IDownloader {
 

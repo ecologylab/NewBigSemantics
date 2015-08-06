@@ -2,7 +2,7 @@
 
 /// <reference path='./simpl.d.ts' />
 
-import simpl = require('../BigSemanticsJavaScript/bsjsCore/simpl/simplBase');
+import simpl = require('../../bigsemantics/bsjsCore/simpl/simplBase');
 
 function assert(cond) {
   if (!cond) {
