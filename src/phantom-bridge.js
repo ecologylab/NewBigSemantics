@@ -1,7 +1,5 @@
 // Bridge script running inside PhantomJS.
 
-declare var phantom: any; // to make TS compiler happy
-
 var system = require('system');
 var host = system.args[1];
 var port = system.args[2];
@@ -59,7 +57,7 @@ controlPage.onAlert = function(msgStr) {
     return;
   }
 
-  var resp: any = { id: msg.id, pageId: msg.pageId };
+  var resp = { id: msg.id, pageId: msg.pageId };
   if (msg.method == 'createPage') {
     if (!pages[msg.pageId]) {
       var page = webpage.create();

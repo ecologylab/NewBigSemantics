@@ -6,7 +6,7 @@
 import simpl = require('../bigsemantics/bsjsCore/simpl/simplBase');
 import pm = require('./phantom-master');
 
-declare var extractMetadataSync: (resp, mmd, bs, options)=>bigsemantics.Metadata;
+declare var extractMetadataSync: bigsemantics.IExtractorSync;
 
 var bsjsFiles = [
   '../bigsemantics/bsjsCore/simpl/simplBase.js',
@@ -75,6 +75,7 @@ export function createPhantomExtractor(host: string,
                         mmd = mmd['meta_metadata'];
                       }
                       var resp = {
+                        code: 200,
                         entity: document,
                         location: document.location.href
                       };

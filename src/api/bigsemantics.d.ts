@@ -30,6 +30,7 @@ declare namespace bigsemantics {
   }
 
   export class Readyable {
+    constructor();
     isReady(): boolean;
     onReady(callback: (err: any, that: Readyable)=>void): void;
     setReady(): void;
@@ -75,6 +76,8 @@ declare namespace bigsemantics {
   var extractMetadata: IExtractor;
 
   export class RepoMan extends Readyable {
+    constructor(source: any, options: any);
+
     loadMmd(
       name: string,
       options: any,
@@ -115,10 +118,17 @@ declare namespace bigsemantics {
   }
 
   export class BigSemantics extends Readyable implements IBigSemantics {
+    constructor(repoSource: any, options: any);
+
     loadMetadata(location, options, callback);
     loadInitialMetadata(location, options, callback);
     loadMmd(name, options, callback);
     selectMmd(location, options, callback);
+  }
+
+  export var BSUtils: {
+    unwrap(target: Object): Metadata;
+    getType(metadata: Metadata): string;
   }
 
 }

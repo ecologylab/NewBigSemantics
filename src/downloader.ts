@@ -4,7 +4,7 @@
 /// <reference path='./api/bigsemantics.d.ts' />
 
 import request = require('request');
-import ParsedURL = require('../bigsemantics/bsjsCore/ParsedURL');
+import bigsemantics = require('../bigsemantics/bsjsCore/base-lib');
 
 export class BaseDownloader implements bigsemantics.IDownloader {
 
@@ -34,7 +34,7 @@ export class BaseDownloader implements bigsemantics.IDownloader {
   }
 
   httpGet(location, options, callback) {
-    var purl = new ParsedURL(location);
+    var purl = new bigsemantics.ParsedURL(location);
     var result: bigsemantics.Response = { location: location, code: 0 };
 
     var rOpts: any = {
