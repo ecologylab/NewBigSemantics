@@ -197,12 +197,16 @@ export function spawnPhantom(host: string,
   if (options === undefined || options == null) { options = {}; }
   if (options.phantomPath === undefined) { options.phantomPath = 'phantomjs'; }
   if (options.params === undefined) { options.params = {}; }
+  if (options.bridgeScript === undefined) {
+    options.bridgeScript = __dirname + '/phantom-bridge.js';
+  }
 
   var args = [];
   for (var param in options.params) {
     args.push('--' + param + '=' + options.params[param]);
   }
-  args = args.concat([__dirname + '/phantom-bridge.js', host, port]);
+  console.log(options.bridgeScript);
+  args = args.concat([options.bridgeScript, host, port]);
   var phantom = proc.spawn(options.phantomPath, args);
   setTimeout(function() { callback(null, phantom); }, 1000);
 }

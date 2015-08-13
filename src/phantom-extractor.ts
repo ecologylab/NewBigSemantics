@@ -3,17 +3,18 @@
 /// <reference path="./api/simpl.d.ts" />
 /// <reference path="./api/bigsemantics.d.ts" />
 
+import path = require('path');
 import simpl = require('../bigsemantics/bsjsCore/simpl/simplBase');
 import pm = require('./phantom-master');
 
 declare var extractMetadataSync: bigsemantics.IExtractorSync;
 
 var bsjsFiles = [
-  '../bigsemantics/bsjsCore/simpl/simplBase.js',
-  '../bigsemantics/bsjsCore/BSUtils.js',
-  '../bigsemantics/bsjsCore/FieldOps.js',
-  '../bigsemantics/bsjsCore/FieldParsers.js',
-  '../bigsemantics/bsjsCore/Extractor.js'
+  path.join(__dirname, '../bigsemantics/bsjsCore/simpl/simplBase.js'),
+  path.join(__dirname, '../bigsemantics/bsjsCore/BSUtils.js'),
+  path.join(__dirname, '../bigsemantics/bsjsCore/FieldOps.js'),
+  // path.join(__dirname, '../bigsemantics/bsjsCore/FieldParsers.js'),
+  path.join(__dirname, '../bigsemantics/bsjsCore/Extractor.js'),
 ];
 
 interface Callback {

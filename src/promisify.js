@@ -1,37 +1,4 @@
-// A demo bigsemantics service
-
-/// <reference path="../typings/tsd.d.ts" />
-
-var http = require('http');
-var koa = require('koa');
-
-var downloader = require('./downloader');
-var pd = require('./phantom-extractor');
-var RepoMan = require('../bigsemantics/bsjsCore/RepoMan');
-var BigSemantics = require('../bigsemantics/bsjsCore/BigSemantics');
-
-var repoSource = {
-  url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'
-};
-var options = {
-  downloader: new downloader.BaseDownloader()
-};
-var repoMan = new RepoMan(repoSource, options);
-repoMan.onReady(function(err, repoMan) {
-  if (err) { console.error(err); return; }
-
-  pd.createPhantomExtractor('localhost', 8880, null, function(err, extractor) {
-    options.extractor = extractor;
-    options.repoMan = repoMan;
-
-    var bs = new BigSemantics(null, options);
-    bs.onReady(function(err, bs) {
-      if (err) { console.error(err); return; }
-
-      startService(bs);
-    });
-  });
-});
+// Promisify a callback based function / method.
 
 // Convert a callback based function / method into a ES6 Promise.
 //
@@ -60,7 +27,7 @@ function promisify(func, that) {
     throw new Error("Invalid arguments");
   }
 
-   return function() {
+  return function() {
     var args = new Array(arguments.length);
     for (var i = 0; i < arguments.length; ++i) {
       args[i] = arguments[i];
@@ -94,21 +61,7 @@ function promisify(func, that) {
   };
 }
 
-function startService(bs) {
-  var app = koa();
-
-  app.use(function*(next) {
-    var url = this.query['url'];
-    console.log("Received URL: " + url);
-    if (url) {
-      var options = {};
-      var result = yield promisify('loadMetadata', bs)(url, options);
-      this.body = result.metadata;
-    } else {
-      this.throw(400, "Parameter 'url' required.");
-    }
-  });
-
-  http.createServer(app.callback()).listen(8000);
+if (typeof module == 'object') {
+  module.exports = promisify;
 }
 

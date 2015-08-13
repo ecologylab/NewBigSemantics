@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "sourceMap": true,
     "outDir": "build"
   },
   "files": [
@@ -15,7 +14,10 @@
     "src/test-downloader.ts",
     "src/test-phantom-master.ts",
 
-    "src/utils/prep-baseline.ts"
+    "src/utils/prep-baseline.ts",
+    "src/utils/edit-distance.ts",
+    "src/utils/coverage.ts",
+    "src/utils/calc-coverage.ts"
   ]
 }
 

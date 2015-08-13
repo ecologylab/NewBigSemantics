@@ -6,6 +6,12 @@ var port = system.args[2];
 console.log("Host: " + host);
 console.log("Port: " + port);
 
+var emit = function(name, msg) {
+  controlPage.evaluate(function(name, msg) {
+    window['socket'].emit(name, msg);
+  }, name, msg);
+}
+
 var webpage = require('webpage');
 var controlPage = webpage.create();
 
@@ -29,12 +35,6 @@ controlPage.onConsoleMessage = function(msg) {
   // TODO send message back to controller
   console.log("Control Page Message: ", msg);
 };
-
-var emit = function(name, msg) {
-  controlPage.evaluate(function(name, msg) {
-    window['socket'].emit(name, msg);
-  }, name, msg);
-}
 
 var pages = {};
 
