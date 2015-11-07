@@ -4,20 +4,21 @@
     "outDir": "build"
   },
   "files": [
-    "src/downloader.ts",
-    "src/phantom-extractor.ts",
-    "src/phantom-master.ts",
-    "src/bs-phantom.ts",
-    "src/test-bs-phantom.ts",
-
     "src/api/test-simpl.ts",
-    "src/test-downloader.ts",
-    "src/test-phantom-master.ts",
 
-    "src/utils/prep-baseline.ts",
-    "src/utils/edit-distance.ts",
-    "src/utils/coverage.ts",
-    "src/utils/calc-coverage.ts"
+    "src/bscore.ts",
+    "src/test-bscore.ts",
+    "src/downloader.ts",
+    "src/test-downloader.ts",
+    "src/extractor.ts",
+
+    "src/phantom/phantom-master.ts",
+    "src/phantom/test-phantom-master.ts",
+
+    "src/quality/calc-coverage.ts",
+    "src/quality/coverage.ts",
+    "src/quality/edit-distance.ts",
+    "src/quality/prep-baseline.ts"
   ]
 }
 

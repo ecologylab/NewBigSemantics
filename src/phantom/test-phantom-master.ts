@@ -1,42 +1,47 @@
 // Testing Phantomteer
 
+import cp = require('child_process');
 import pm = require('./phantom-master');
-import downloader = require('./downloader');
+import downloader = require('../downloader');
 
 function doWithPage(host: string,
                     port: number,
                     options: Object,
-                    callback: (err, page: pm.Page, end: ()=>void)=>void) {
+                    callback: (err: any, page: pm.Page, end: ()=>void)=>void) {
   pm.createMaster(host, port, options, function(err, master) {
     if (err) { callback(err, null, null); return; }
 
-    pm.spawnPhantom(host, port, options, function(err, phantom) {
-      if (err) { callback(err, null, null); return; }
+    var args = [ 'phantom-bridge.js', host, String(port) ];
+    var phantom = cp.spawn('phantomjs', args);
+    phantom.stdout.on('data', function(data) {
+      console.log("PHANTOM INFO: " + data.toString());
+    });
+    phantom.stderr.on('data', function(data) {
+      console.warn("PHANTOM ERROR: " + data.toString());
+    });
+    phantom.on('error', function(err) {
+      console.warn("ERROR: PHANTOM: " + err);
+    });
+    phantom.on('exit', function (code, signal) {
+      console.log("INFO: Phantom exitted with code " + code
+                  + (signal?(", signal: " + signal):("")));
+    });
 
-      phantom.stdout.on('data', function(data) {
-        console.log("PHANTOM INFO: " + data.toString());
-      });
-      phantom.stderr.on('data', function(data) {
-        console.warn("PHANTOM ERROR: " + data.toString());
-      });
-      phantom.on('error', function(err) {
-        console.warn("ERROR: PHANTOM: " + err);
-      });
-      phantom.on('exit', function (code, signal) {
-        console.log("INFO: Phantom exitted with code " + code
-                    + (signal?(", signal: " + signal):("")));
-      });
+    var masterStarted = false;
+    master.on('connection', function() {
+      if (masterStarted) { return; }
+      masterStarted = true;
 
       master.createPage(function(err, page) {
-        if (err) { callback(err, null, null); return; }
+        if (err) { return callback(err, null, null); }
 
         callback(null, page, function() {
           page.close(function(err) {
-            if (err) { console.error("Failed to close page!"); return; }
+            if (err) { return console.error("Failed to close page!"); }
 
             console.log("Page closed.");
             master.exit(function(err) {
-              if (err) { console.error("Failed to exit phantom!"); return; }
+              if (err) { return console.error("Failed to exit phantom!"); }
 
               console.log("Phantom exited.");
               master.shutdown();
@@ -60,12 +65,12 @@ function test1() {
     };
 
     page.open(url, null, function(err) {
-      if (err) { console.error("Failed to set content!"); end(); return; }
+      if (err) { console.error("Failed to set content!"); return end(); }
 
       page.evaluate(func, xpath, function(err, result) {
-        if (err) { console.error("Failed to run function!"); end(); return; }
+        if (err) { console.error("Failed to run function!"); return end(); }
 
-        console.log("Result: ", result);
+        console.log("Result: %j", result);
         end();
       });
     });
@@ -89,36 +94,36 @@ function test2() {
   var mmdUrl = 'http://api.ecologylab.net/BigSemanticsService/mmd.json?name=amazon_product';
   var d = new downloader.BaseDownloader();
   d.httpGet(mmdUrl, null, function(err, resp) {
-    if (err) { console.error(err); return; }
+    if (err) { return console.error(err); }
 
     var smmd = resp.text;
 
     doWithPage('localhost', 8888, null, function(err, page, end) {
-      if (err) { console.error(err); return; }
+      if (err) { return console.error(err); }
 
       page.open(url, null, function(err) {
-        if (err) { console.error(err); end(); return; }
+        if (err) { console.error(err); return end(); }
 
         var toInject = jsFiles.length;
         for (var jsFile of jsFiles) {
           page.injectJs(jsFile, function(err, result) {
-            if (err) { console.error(err); end(); return; }
-            if (result == false) { console.error("Failed to inject " + jsFile); return; }
-
             toInject--;
-            if (toInject == 0) {
+            if (err) { return console.error(err); }
+            if (result === false) { return console.error("Failed to inject " + jsFile); }
+
+            if (toInject === 0) {
               var func = function(smmd): any {
                 var mmd = simpl.deserialize(smmd)['meta_metadata'];
                 var resp = {
                   entity: document,
-                  location: document.location.href
+                  location: document.location.href,
                 };
                 var metadata = extractMetadataSync(resp, mmd, null, null);
                 return metadata;
               };
               page.evaluate(func, smmd, function(err, result) {
-                if (err) { console.error(err); end(); return; }
-                console.log("Result: ", result);
+                if (err) { console.error(err); return end(); }
+                console.log("Result: %j", result);
                 end();
               });
             }
@@ -141,23 +146,23 @@ function test3() {
   var mmdUrl = 'http://api.ecologylab.net/BigSemanticsService/mmd.json?name=amazon_product';
   var d = new downloader.BaseDownloader();
   d.httpGet(mmdUrl, null, function(err, resp) {
-    if (err) { console.error(err); return; }
+    if (err) { return console.error(err); }
 
     var smmd = resp.text;
 
     doWithPage('localhost', 8888, null, function(err, page, end) {
-      if (err) { console.error(err); return; }
+      if (err) { return console.error(err); }
 
       page.open(url, null, function(err) {
-        if (err) { console.error(err); end(); return; }
+        if (err) { console.error(err); return end(); }
 
         var toInject = jsFiles.length;
         for (var jsFile of jsFiles) {
           page.injectJs(jsFile, function(err, result) {
-            if (err) { console.error(err); end(); return; }
-            if (result == false) { console.error("Failed to inject " + jsFile); return; }
-
             toInject--;
+            if (err) { return console.error(err); }
+            if (result == false) { return console.error("Failed to inject " + jsFile); }
+
             if (toInject == 0) {
               var func = function(smmd): any {
                 var mmd = simpl.deserialize(smmd)['meta_metadata'];
@@ -169,8 +174,8 @@ function test3() {
                 return metadata;
               };
               page.evaluate(func, smmd, function(err, result) {
-                if (err) { console.error(err); end(); return; }
-                console.log("Result: ", result);
+                if (err) { console.error(err); return end(); }
+                console.log("Result: %j", result);
                 end();
               });
             }
@@ -181,5 +186,5 @@ function test3() {
   });
 }
 
-test2();
+test1();
 
