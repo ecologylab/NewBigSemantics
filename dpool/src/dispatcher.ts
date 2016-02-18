@@ -1,0 +1,120 @@
+// Dispatcher.
+
+/// <reference path="../typings/main.d.ts" />
+
+import * as events from 'events';
+import Matcher from './matcher';
+import TaskMan from './taskMan';
+import WorkerMan from './workerMan';
+import parseHttpResp from './httpRespParser';
+import { Task, Worker } from './types';
+import logger from './logging';
+import { taskLog } from './logging';
+
+export default class Dispatcher extends events.EventEmitter {
+
+  private static defaultDispatchingInterval = 1000;
+
+  private dispatchIID: any;
+
+  constructor(private taskMan: TaskMan,
+              private workerMan: WorkerMan,
+              private matcher: Matcher,
+              private options?: any) {
+    super();
+    this.options = options || {
+      dispatchingInterval: Dispatcher.defaultDispatchingInterval,
+    };
+  }
+
+  dispatchNext(): boolean {
+    return this.taskMan.findAndDispatch(task => {
+      return this.workerMan.findAndDispatch(worker => {
+        if (this.matcher.matches(worker, task)) {
+          // worker can handle task, dispatch it
+          task.state = 'dispatched';
+          worker.state = 'busy';
+          taskLog(task, 'dispatching', { worker: worker });
+          logger.info({
+            url: task.url,
+            taskId: task.id,
+            workerId: worker.id,
+          }, "dispatching");
+
+          this.workerMan.handle(task, worker, (err, presult) => {
+            worker.state = 'ready';
+            if (err) {
+              task.logs.push({
+                datetime: new Date(),
+                name: 'error on handling',
+                args: {
+                  worker: worker,
+                  error: err.message,
+                  processResult: presult,
+                },
+              });
+              logger.warn({
+                err: err,
+                processResult: presult,
+                url: task.url,
+                taskId: task.id,
+                workerId: worker.id,
+              }, "error when handling task on worker");
+
+              task.attempts = (task.attempts || 0) + 1;
+              if (task.attempts < task.maxAttempts) {
+                task.state = 'ready';
+                this.taskMan.redispatch(task);
+                this.emit('task_redispatching', err, task)
+              } else {
+                task.state = 'terminated';
+                task.logs.push({
+                  datetime: new Date(),
+                  name: 'terminated',
+                });
+                logger.warn({ url: task.url, id: task.id, }, "task terminated");
+
+                if (typeof task.callback === 'function') {
+                  task.callback(new Error("Too many errors."), task);
+                }
+              }
+            } else {
+              task.state = 'finished';
+                task.logs.push({
+                  datetime: new Date(),
+                  name: 'finished',
+                });
+              logger.info({ url: task.url, id: task.id, }, "task successfully finished");
+              task.response = parseHttpResp(task.url, presult.stdout);
+              if (typeof task.callback === 'function') {
+                task.callback(null, task);
+              }
+            }
+          });
+
+          // if task is dispatched, stop looking for next worker.
+          // returning true will short circuit randSome().
+          return true;
+        }
+        return false;
+      });
+    });
+  }
+
+  start(): void {
+    this.dispatchIID = setInterval(() => {
+      while (this.dispatchNext()) {
+        // no op
+      };
+    }, this.options.dispatchingInterval);
+  }
+
+  stop(): void {
+    if (this.dispatchIID) {
+      clearInterval(this.dispatchIID);
+      this.dispatchIID = null;
+    }
+  }
+
+}
+

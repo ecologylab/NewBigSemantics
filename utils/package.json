@@ -1,0 +1,11 @@
+{
+  "name": "bigsemantics-utils",
+  "version": "0.1.7",
+  "description": "BigSemantics Utilities.",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yin Qu (me.yin.qu@gmail.com)",
+  "license": "UNLICENSED"
+}
