@@ -41,7 +41,7 @@ var logger = bunyan.createLogger({
       count: 30,
     },
     {
-      level: 'warn',
+      level: 'info',
       stream: process.stderr,
     },
   ],
