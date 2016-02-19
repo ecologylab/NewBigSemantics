@@ -30,11 +30,16 @@ export default class ParsedURL {
 
         // TODO a better way of getting the top level domain, see
         // https://publicsuffix.org/list/public_suffix_list.dat
-        if (this.host.length >= 4 && this.host.substr(0, 4) == 'www.') {
-          this.domain = this.host.substr(4);
-        } else {
-          this.domain = this.host;
+        var domain: string = this.host;
+        var m2 = domain.match(/.*?\.([^.]+\.\w\w\w?\.\w\w)/);
+        if (m2) {
+          domain = m2[1];
         }
+        var m3 = domain.match(/.*?\.([^.]+\.\w\w\w)/);
+        if (m3) {
+          domain = m3[1];
+        }
+        this.domain = domain;
 		  
         this.path = matches[4];
         if (this.path.length == 0) {
