@@ -14,7 +14,7 @@ identity=$4
 timeout=$5
 
 remote_cmd="curl --version"
-cmd="ssh -o StrictHostKeyChecking=no -i $identity -p $port $user@$host $remote_cmd"
+cmd="ssh -o GlobalKnownHostsFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $identity -p $port $user@$host $remote_cmd"
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 $DIR/timeout -t $timeout $cmd
