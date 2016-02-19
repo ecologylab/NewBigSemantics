@@ -118,12 +118,14 @@ export default class WorkerMan {
 
       spawn('bash', args, null, (err, res) => {
         if (err) {
+          if (worker.state === 'ready') {
+            logger.warn({
+              workerId: worker.id,
+              err: err,
+              heartbeatResult: nicePResult(res),
+            }, "worker unresponsive");
+          }
           worker.state = 'unresponsive';
-          logger.warn({
-            workerId: worker.id,
-            err: err,
-            heartbeatResult: nicePResult(res),
-          }, "worker unresponsive");
         } else {
           if (worker.state === 'unresponsive') {
             worker.state = 'ready';
