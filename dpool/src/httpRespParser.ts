@@ -5,7 +5,10 @@
 import * as nodeUrl from 'url';
 import { HttpHeader, HttpResponse } from './types';
 
-export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
+export default
+function parseHttpResp(url: string,
+                       raw: Buffer,
+                       callback: (err: Error, resp: HttpResponse)=>void): void {
   var otherUrls = new Array<string>();
 
   var code: number;
@@ -26,7 +29,7 @@ export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
     // read status
     var m1 = lines[0].match(/^HTTP\/\d\.\d\s+(\d+)\s+(.*)/);
     if (!m1) {
-      throw new Error("Invalid status line: " + lines[0]);
+      return callback(new Error("Invalid status line: " + lines[0]), null);
     }
     code = Number(m1[1]);
     message = m1[2];
@@ -36,7 +39,7 @@ export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
     for (var i = 1; i < lines.length; ++i) {
       var m2 = lines[i].match(/^([^:]+):\s*(.+)/);
       if (!m2) {
-        throw new Error("Invalid header line: " + lines[i]);
+        return callback(new Error("Invalid header line: " + lines[i]), null);
       }
       hdrs.push({ name: m2[1], value: m2[2] });
     }
@@ -59,7 +62,7 @@ export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
       return false;
     });
     if (!foundRedirectLocation) {
-      throw new Error("Redirect w/o Location: " + hdrs);
+      return callback(new Error("Redirect w/o Location: " + hdrs), null);
     }
   }
 
@@ -73,6 +76,6 @@ export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
   if (otherUrls.length > 0) {
     result.otherUrls = otherUrls;
   }
-  return result;
+  callback(null, result);
 }
 

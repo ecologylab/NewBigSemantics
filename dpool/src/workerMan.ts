@@ -7,6 +7,7 @@ import * as path from 'path';
 import { Task, Worker } from './types';
 import { seq, shuffle, spawn } from 'bigsemantics-utils';
 import logger from './logging';
+import { nicePResult } from './logging';
 
 export default class WorkerMan {
 
@@ -121,7 +122,7 @@ export default class WorkerMan {
           logger.warn({
             workerId: worker.id,
             err: err,
-            heartbeatResult: res,
+            heartbeatResult: nicePResult(res),
           }, "worker unresponsive");
         } else {
           if (worker.state === 'unresponsive') {

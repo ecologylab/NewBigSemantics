@@ -9,7 +9,7 @@ import WorkerMan from './workerMan';
 import parseHttpResp from './httpRespParser';
 import { Task, Worker } from './types';
 import logger from './logging';
-import { taskLog } from './logging';
+import { taskLog, nicePResult } from './logging';
 
 export default class Dispatcher extends events.EventEmitter {
 
@@ -44,18 +44,19 @@ export default class Dispatcher extends events.EventEmitter {
           this.workerMan.handle(task, worker, (err, presult) => {
             worker.state = 'ready';
             if (err) {
+              var processResult = nicePResult(presult);
               task.logs.push({
                 datetime: new Date(),
                 name: 'error on handling',
                 args: {
                   worker: worker,
                   error: err.message,
-                  processResult: presult,
+                  processResult: processResult,
                 },
               });
               logger.warn({
                 err: err,
-                processResult: presult,
+                processResult: processResult,
                 url: task.url,
                 taskId: task.id,
                 workerId: worker.id,
@@ -85,10 +86,15 @@ export default class Dispatcher extends events.EventEmitter {
                   name: 'finished',
                 });
               logger.info({ url: task.url, id: task.id, }, "task successfully finished");
-              task.response = parseHttpResp(task.url, presult.stdout);
-              if (typeof task.callback === 'function') {
-                task.callback(null, task);
-              }
+              parseHttpResp(task.url, presult.stdout, (err, resp) => {
+                task.response = resp;
+                if (typeof task.callback === 'function') {
+                  if (err) {
+                    return task.callback(err, task);
+                  }
+                  task.callback(null, task);
+                }
+              });
             }
           });
 

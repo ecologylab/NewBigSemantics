@@ -35,9 +35,11 @@ DownloaderPool.create((err, dpool) => {
       if (err) {
         resp.status(500);
       }
-      if (task.response.raw) {
-        task.response.content = task.response.raw.toString();
-        delete task.response.raw;
+      if (task.response) {
+        if (task.response.raw) {
+          task.response.content = task.response.raw.toString();
+          delete task.response.raw;
+        }
       }
       resp.json(task);
       resp.end();
@@ -52,7 +54,7 @@ DownloaderPool.create((err, dpool) => {
     }
 
     dpool.newTask(toTaskProto(req.query), (err, task) => {
-      if (task) {
+      if (task && task.response) {
         resp.status(task.response.code);
         task.response.headers.forEach(hdr => {
           resp.set(hdr.name, hdr.value);
@@ -60,7 +62,8 @@ DownloaderPool.create((err, dpool) => {
         resp.end(task.response.raw);
       } else {
         resp.status(500);
-        resp.end("Weird error: " + err.message);
+        resp.send(task);
+        resp.end();
       }
     });
   });

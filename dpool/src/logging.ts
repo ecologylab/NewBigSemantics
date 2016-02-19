@@ -16,6 +16,20 @@ export function taskLog(task: Task, name: string, args?: any) {
   });
 }
 
+export function nicePResult(pResult: any): any {
+  var result: any = {};
+  if (pResult.code) {
+    result.code = pResult.code;
+  }
+  if (pResult.stdout && pResult.stdout instanceof Buffer) { 
+    result.stdout = pResult.stdout.toString();
+  }
+  if (pResult.stderr && pResult.stderr instanceof Buffer) { 
+    result.stderr = pResult.stderr.toString();
+  }
+  return result;
+}
+
 var logger = bunyan.createLogger({
   name: 'dpool-log',
   streams: [
@@ -31,6 +45,7 @@ var logger = bunyan.createLogger({
       stream: process.stderr,
     },
   ],
+  serializers: bunyan.stdSerializers,
 });
 
 export default logger;
