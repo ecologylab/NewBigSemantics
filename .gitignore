@@ -3,6 +3,7 @@
 
 # editors
 ~*
+.vscode
 
 ## Logs
 logs

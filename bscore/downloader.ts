@@ -1,12 +1,14 @@
 // Downloader
 
 /// <reference path='../typings/tsd.d.ts' />
-/// <reference path='./api/bigsemantics.d.ts' />
 
-import request = require('request');
-import bigsemantics = require('../bigsemantics/bsjsCore/base-lib');
+import * as request from 'request';
 
-export class BaseDownloader implements bigsemantics.IDownloader {
+import * as bigsemantics from '../bigsemantics/bsjsCore/bstypes.d.ts';
+import { ParsedURL } from '../bigsemantics/bsjsCore/ParsedURL.d.ts';
+import { IDownloader } from '../bigsemantics/bsjsCore/Downloader.d.ts';
+
+export class BaseDownloader implements IDownloader {
 
   static parseContentType(resp: bigsemantics.Response, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
@@ -34,7 +36,7 @@ export class BaseDownloader implements bigsemantics.IDownloader {
   }
 
   httpGet(location, options, callback) {
-    var purl = new bigsemantics.ParsedURL(location);
+    var purl = new ParsedURL(location);
     var result: bigsemantics.Response = { location: location, code: 0 };
 
     var rOpts: any = {

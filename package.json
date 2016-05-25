@@ -2,20 +2,19 @@
   "name": "bigsemantics",
   "version": "2.0.0",
   "description": "The new BigSemantics.",
-  "main": "build/first-test.js",
+  "main": "build/index.js",
   "dependencies": {
-    "koa": "^0.21.0",
-    "request": "^2.58.0",
-    "socket.io": "^1.3.5",
-    "winston": "^1.0.1"
+    "bluebird": "^3.3.5",
+    "bunyan": "^1.8.1",
+    "express": "^4.13.4",
+    "lru-cache": "^4.0.1",
+    "request": "^2.72.0",
+    "xml": "^1.0.1"
   },
-  "devDependencies": {
-    "gulp": "^3.9.0",
-    "gulp-shell": "^0.4.2"
-  },
+  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Interface Ecology Lab",
-  "license": "ISC"
+  "license": "MIT"
 }
