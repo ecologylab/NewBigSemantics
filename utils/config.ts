@@ -1,6 +1,6 @@
 // Simple configuration related utilities.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import { parseJson } from './json';
 
@@ -41,4 +41,3 @@ export function loadConfig(filename: string): any {
     return new Error("Failed to load config, exception: " + exception);
   }
 }
-

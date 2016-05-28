@@ -1,6 +1,6 @@
 // Coding / decoding utilities.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as crypto from 'crypto';
 
@@ -61,4 +61,3 @@ export function base32enc(x): string {
 export function sha256(s: string): Buffer {
   return crypto.createHash('sha256').update(s).digest();
 }
-

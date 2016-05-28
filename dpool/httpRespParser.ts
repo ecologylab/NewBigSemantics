@@ -1,6 +1,6 @@
 // A HTTP response parser.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as nodeUrl from 'url';
 import { HttpHeader, HttpResponse } from './types';
@@ -78,4 +78,3 @@ function parseHttpResp(url: string,
   }
   callback(null, result);
 }
-

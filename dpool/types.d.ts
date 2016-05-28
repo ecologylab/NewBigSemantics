@@ -1,6 +1,6 @@
 // Type definitions, for TypeScript.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 export interface HttpHeader {
   name: string;
@@ -71,4 +71,3 @@ export interface DomainInterval {
   // the minimum interval for accessing this domain, in millisecond.
   min: number;
 }
-

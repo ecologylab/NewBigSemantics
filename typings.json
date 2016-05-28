@@ -1,14 +1,17 @@
 {
   "name": "bigsemantics",
-  "version": "2.0.0",
   "dependencies": {},
-  "devDependencies": {},
-  "ambientDependencies": {
+  "globalDependencies": {
     "bluebird": "registry:dt/bluebird#2.0.0+20160319051630",
     "bunyan": "registry:dt/bunyan#0.0.0+20160412155112",
     "express": "registry:dt/express#4.0.0+20160317120654",
+    "express-serve-static-core": "registry:dt/express-serve-static-core#0.0.0+20160322035842",
+    "form-data": "registry:dt/form-data#0.0.0+20160316155526",
     "lru-cache": "registry:dt/lru-cache#2.5.0+20160317120654",
-    "node": "registry:dt/node#4.0.0+20160412142033",
-    "request": "registry:dt/request#0.0.0+20160316155526"
+    "mime": "registry:dt/mime#0.0.0+20160316155526",
+    "node": "registry:dt/node#6.0.0+20160524002506",
+    "request": "registry:dt/request#0.0.0+20160524135346",
+    "serve-static": "registry:dt/serve-static#0.0.0+20160501131543",
+    "socket.io": "registry:dt/socket.io#1.4.4+20160317120654"
   }
 }

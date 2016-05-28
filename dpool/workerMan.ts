@@ -1,11 +1,12 @@
 // Worker manager.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { Task, Worker } from './types';
-import { seq, shuffle, spawn } from 'bigsemantics-utils';
+import { seq, shuffle } from '../utils/math';
+import { spawn } from '../utils/process';
 import logger from './logging';
 import { nicePResult } from './logging';
 
@@ -159,4 +160,3 @@ export default class WorkerMan {
   }
 
 }
-

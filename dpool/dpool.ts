@@ -1,6 +1,6 @@
 // The facade of downloader pool, as a library.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -9,7 +9,8 @@ import Dispatcher from './dispatcher';
 import Matcher from './matcher';
 import TaskMan from './taskMan';
 import WorkerMan from './workerMan';
-import { parseJson, loadConfig } from 'bigsemantics-utils';
+import { parseJson } from '../utils/json';
+import { loadConfig } from '../utils/config';
 import { Task } from './types';
 import logger from './logging';
 
@@ -106,4 +107,3 @@ export default class DownloaderPool {
   }
 
 }
-

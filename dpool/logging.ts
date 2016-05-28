@@ -1,6 +1,6 @@
 // Logging.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as bunyan from 'bunyan';
 import { Log, Task } from './types';
@@ -21,10 +21,10 @@ export function nicePResult(pResult: any): any {
   if (pResult.code) {
     result.code = pResult.code;
   }
-  if (pResult.stdout && pResult.stdout instanceof Buffer) { 
+  if (pResult.stdout && pResult.stdout instanceof Buffer) {
     result.stdout = pResult.stdout.toString();
   }
-  if (pResult.stderr && pResult.stderr instanceof Buffer) { 
+  if (pResult.stderr && pResult.stderr instanceof Buffer) {
     result.stderr = pResult.stderr.toString();
   }
   return result;
@@ -49,4 +49,3 @@ var logger = bunyan.createLogger({
 });
 
 export default logger;
-

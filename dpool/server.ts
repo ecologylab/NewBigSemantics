@@ -1,6 +1,6 @@
 // The web server
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 /// <reference path="./xml.d.ts" />
 
 import * as express from 'express';
@@ -229,4 +229,3 @@ DownloaderPool.create((err, dpool) => {
   });
 
 });
-

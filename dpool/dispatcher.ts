@@ -1,6 +1,6 @@
 // Dispatcher.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as events from 'events';
 import Matcher from './matcher';
@@ -123,4 +123,3 @@ export default class Dispatcher extends events.EventEmitter {
   }
 
 }
-

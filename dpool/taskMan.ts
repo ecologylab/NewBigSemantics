@@ -1,10 +1,10 @@
 // Task manager.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as LRU from 'lru-cache';
 import { Task, Log } from './types';
-import { base32enc, sha256 } from 'bigsemantics-utils';
+import { base32enc, sha256 } from '../utils/codec';
 import logger from './logging';
 import { taskLog } from './logging';
 
@@ -93,4 +93,3 @@ export default class TaskMan {
   }
 
 }
-

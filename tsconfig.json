@@ -6,11 +6,10 @@
     "declaration": true
   },
   "exclude": [
-    "bigsemantics",
-    "node_modules",
     "build",
-    "typings/browser.d.ts",
-    "typings/browser"
+    "BigSemanticsJavaScript",
+    "node_modules",
+    "typings",
+    "bscore"
   ]
 }
-

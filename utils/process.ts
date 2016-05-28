@@ -1,6 +1,6 @@
 // Simple process related utilities.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 import * as cp from 'child_process';
 
@@ -57,4 +57,3 @@ export function spawn(cmd: string,
     }
   });
 }
-

@@ -1,6 +1,8 @@
 // Matches a downloader (as a worker) and a task, based on access time.
 
-import ParsedURL from './ParsedURL';
+/// <reference path="../typings/index.d.ts" />
+
+import ParsedURL from '../BigSemanticsJavaScript/bsjsCore/ParsedURL';
 import { Task, Worker, DomainInterval } from './types';
 import logger from './logging';
 
@@ -68,4 +70,3 @@ export default class Matcher {
   }
 
 }
-

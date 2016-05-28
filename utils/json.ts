@@ -1,6 +1,6 @@
 // Utility functions.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 export function parseJson(s: string): any {
   try {
@@ -10,4 +10,3 @@ export function parseJson(s: string): any {
     return new Error("Failed to parse JSON, exception: " + exception);
   }
 }
-

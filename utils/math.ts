@@ -1,6 +1,6 @@
 // Simple math related utilities.
 
-/// <reference path="../typings/main.d.ts" />
+/// <reference path="../typings/index.d.ts" />
 
 export function seq(n: number, startFrom: number = 0): Array<number> {
   var result = new Array();
@@ -21,4 +21,3 @@ export function shuffle(array: Array<any>): Array<any> {
   }
   return array;
 }
-
