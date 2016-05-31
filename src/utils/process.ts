@@ -1,6 +1,6 @@
 // Simple process related utilities.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as cp from 'child_process';
 

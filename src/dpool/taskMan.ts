@@ -1,6 +1,6 @@
 // Task manager.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as LRU from 'lru-cache';
 import { Task, Log } from './types';

@@ -1,6 +1,6 @@
 // The facade of downloader pool, as a library.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as fs from 'fs';
 import * as os from 'os';

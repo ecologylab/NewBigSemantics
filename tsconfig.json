@@ -1,15 +1,18 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "rootDir": ".",
-    "outDir": "build",
-    "declaration": true
+    "rootDir": "src",
+    "outDir": "build"
   },
   "exclude": [
-    "build",
-    "BigSemanticsJavaScript",
     "node_modules",
     "typings",
-    "bscore"
+    "build",
+
+    "BigSemanticsJavaScript",
+
+    "src/bscore",
+    "src/old-phantom",
+    "src/quality"
   ]
 }

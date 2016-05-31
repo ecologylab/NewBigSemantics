@@ -1,6 +1,6 @@
 // Utility functions.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 export function parseJson(s: string): any {
   try {

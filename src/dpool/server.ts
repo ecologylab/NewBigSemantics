@@ -1,6 +1,6 @@
 // The web server
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 /// <reference path="./xml.d.ts" />
 
 import * as express from 'express';

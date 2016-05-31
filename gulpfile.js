@@ -1,13 +1,22 @@
 // Build new BigSemantics
 
 var gulp = require('gulp');
-var shell = require('gulp-shell');
+var gutil = require('gulp-util');
+var ts = require('gulp-typescript');
 
-gulp.task('tsc', shell.task('tsc', { ignoreErrors: true }));
+var tsProject = ts.createProject('tsconfig.json');
 
-gulp.task('copy-js', function() {
-  return gulp.src('src/**/*.js').pipe(gulp.dest('build/'));
+gulp.task('tsc', function() {
+  return tsProject.src().pipe(ts(tsProject)).js.pipe(gulp.dest('build'));
 });
 
-gulp.task('default', ['tsc', 'copy-js']);
+gulp.task('copy-files', function() {
+  var files = [
+    "src/dpool/script/*",
+    "src/phantom/static/*",
+    "src/phantom/*.js",
+  ];
+  return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
+});
 
+gulp.task('default', ['tsc', 'copy-files']);

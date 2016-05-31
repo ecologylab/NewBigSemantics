@@ -1,6 +1,6 @@
 // Worker manager.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as fs from 'fs';
 import * as path from 'path';

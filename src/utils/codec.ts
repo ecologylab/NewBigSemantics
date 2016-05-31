@@ -1,6 +1,6 @@
 // Coding / decoding utilities.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as crypto from 'crypto';
 

@@ -1,6 +1,6 @@
 // Type definitions, for TypeScript.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 export interface HttpHeader {
   name: string;

@@ -1,6 +1,6 @@
 // Logging.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as bunyan from 'bunyan';
 import { Log, Task } from './types';

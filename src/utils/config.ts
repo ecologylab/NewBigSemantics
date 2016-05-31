@@ -1,6 +1,6 @@
 // Simple configuration related utilities.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import { parseJson } from './json';
 

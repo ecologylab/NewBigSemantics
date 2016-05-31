@@ -1,6 +1,6 @@
 // Dispatcher.
 
-/// <reference path="../typings/index.d.ts" />
+/// <reference path="../../typings/index.d.ts" />
 
 import * as events from 'events';
 import Matcher from './matcher';

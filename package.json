@@ -12,7 +12,10 @@
     "socket.io": "^1.4.6",
     "xml": "^1.0.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^2.13.5"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
