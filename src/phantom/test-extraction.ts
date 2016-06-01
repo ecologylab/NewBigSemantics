@@ -40,18 +40,17 @@ function extractionTest1() {
       bs.loadMetadata(url, options, (err, result) => {
         if(err) console.error(err);
         
-        //console.log(result);
+        console.log(result.metadata);
       });
     });
   });
 }
 
-extractionTest1();
-
+// Required so that TypeScript won't complain about this not existing
 declare var extractMetadataSync;
 
 function createExtractor() {
-  var extractor = function (resp, mmd, bigSemantics, options, mcallback) {
+  var extractor = function (resp, mmd, bigSemantics, options, mcallback: (err: any, result: string | Object) => void) {
     var page = agent.createPage();
     var smmd = simpl.serialize(mmd);
 
@@ -81,10 +80,12 @@ function createExtractor() {
 
         return JSON.stringify(extractMetadataSync(resp, mmd, null, null));
       }, smmd)
-      .then(result => mcallback(result))
+      .then(result => mcallback(null, result))
       .catch(err => console.error("ERROR: ", err))
       .finally(() => master.shutdown());
   }
   
   return extractor;
 }
+
+extractionTest1();
