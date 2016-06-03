@@ -1,7 +1,5 @@
 // A demo bigsemantics service
 
-/// <reference path="../typings/tsd.d.ts" />
-
 var http = require('http');
 var koa = require('koa');
 

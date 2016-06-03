@@ -1,7 +1,5 @@
 // Utilities.
 
-/// <reference path='../typings/tsd.d.ts' />
-
 // Returns a random element from the input array.
 export function randElem<T>(array: Array<T>): T {
   return array[Math.floor(Math.random() * array.length)];

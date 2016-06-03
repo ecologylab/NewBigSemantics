@@ -1,27 +1,69 @@
 // An extractor that uses phantomteer.
 
-/// <reference path="./api/simpl.d.ts" />
-/// <reference path="./api/bigsemantics.d.ts" />
+import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
+import * as bstypes from '../../BigSemanticsJavaScript/bsjsCore/bstypes';
+import * as BigSemantics from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
+import * as Extractor from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
 
 import path = require('path');
-import simpl = require('../bigsemantics/bsjsCore/simpl/simplBase');
-import pm = require('./phantom-master');
+//import simpl = require('../bigsemantics/bsjsCore/simpl/simplBase');
+//import pm = require('./phantom-master');
+import * as pm from '../phantom/master';
 
-declare var extractMetadataSync: bigsemantics.IExtractorSync;
+declare var extractMetadataSync: Extractor.IExtractorSync;
 
 var bsjsFiles = [
-  path.join(__dirname, '../bigsemantics/bsjsCore/simpl/simplBase.js'),
-  path.join(__dirname, '../bigsemantics/bsjsCore/BSUtils.js'),
-  path.join(__dirname, '../bigsemantics/bsjsCore/FieldOps.js'),
-  // path.join(__dirname, '../bigsemantics/bsjsCore/FieldParsers.js'),
-  path.join(__dirname, '../bigsemantics/bsjsCore/Extractor.js'),
+  '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
+  '../../BigSemanticsJavaScript/bsjsCore/FieldOps.js',
+  '../../BigSemanticsJavaScript/bsjsCore/Extractor.js',
+  '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
 ];
 
 interface Callback {
-  (err: any, extractor: bigsemantics.IExtractor): void;
+  (err: any, extractor: Extractor.IExtractor): void;
 }
 
-export function createPhantomExtractor(host: string,
+export function createPhantomExtractor(master: pm.Master, host: string, port: number, options: Object, callback: Callback): void {
+  var agent = master.randomAgent();
+  var page = agent.createPage();
+  
+  var phantomExtract: Extractor.IExtractor
+    = //function(resp: bstypes.Response, mmd: BigSemantics.MetaMetadata,
+      //         bigSemantics: BigSemantics.IBigSemantics, options: Object,
+      //         mcallback: (err: any, metadata: BigSemantics.Metadata) => void): void {
+        function(resp, mmd, bigSemantics, options, mcallback) {
+          
+       
+    
+    var smmd: string = simpl.serialize(mmd);
+    
+    page.open(host)
+        .injectJs(bsjsFiles)
+        .evaluate(() => {
+          var mmd = simpl.deserialize(smmd);
+          if ('meta_metadata' in mmd
+              && mmd['meta_metadata']
+              && mmd['meta_metadata']['name']) {
+            mmd = mmd['meta_metadata'];
+          }
+          
+          var resp = {
+            code: 200,
+            entity: document,
+            location: document.location.href
+          };
+          
+          return extractMetadataSync(resp, mmd as BigSemantics.MetaMetadata, null, null);
+        })
+      .then(result => { console.log(result); mcallback(null, result); })
+      .close()
+      .catch(err => { console.log("ERROR"); mcallback(err, null) });
+  }
+  
+  callback(null, phantomExtract);
+}
+
+/*export function createPhantomExtractor(host: string,
                                        port: number,
                                        options: Object,
                                        callback: Callback): void {
@@ -44,12 +86,12 @@ export function createPhantomExtractor(host: string,
         console.log("INFO: Phantom exitted; code=", code, ", signal=", signal);
       });
 
-      var phantomExtract: bigsemantics.IExtractor =
-        function(resp: bigsemantics.Response,
-                 mmd: bigsemantics.MetaMetadata,
-                 bigSemantics: bigsemantics.IBigSemantics,
+      var phantomExtract: Extractor.IExtractor =
+        function(resp: bstypes.Response,
+                 mmd: BigSemantics.MetaMetadata,
+                 bigSemantics: BigSemantics.IBigSemantics,
                  options: Object,
-                 mcallback: (err: any, metadata: bigsemantics.Metadata)=>void): void {
+                 mcallback: (err: any, metadata: BigSemantics.Metadata)=>void): void {
           var smmd: string = simpl.serialize(mmd);
           master.createPage(function(err, page) {
             if (err) { mcallback(err, null); return; }
@@ -99,4 +141,4 @@ export function createPhantomExtractor(host: string,
     });
   });
 }
-
+*/

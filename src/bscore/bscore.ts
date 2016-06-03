@@ -2,68 +2,74 @@
 //
 // WIP.
 
-/// <reference path="./api/bigsemantics.d.ts" />
-
 import downloader = require('./downloader');
-import pd = require('./phantom-extractor');
-import bigsemantics = require('../bigsemantics/bsjsCore/base-lib');
 
-class BSPhantom extends bigsemantics.Readyable implements bigsemantics.IBigSemantics {
-  private downloader: bigsemantics.IDownloader;
-  private repoMan: bigsemantics.RepoMan;
-  private extractor: bigsemantics.IExtractor;
-  private bs: bigsemantics.BigSemantics;
+import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
+import BigSemantics from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
+import { IBigSemantics, MetaMetadata } from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
+import RepoMan from '../../BigSemanticsJavaScript/bsjsCore/RepoMan';
+import { Downloader, IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
+import Readyable from '../../BigSemanticsJavaScript/bsjsCore/Readyable';
+import { IExtractor, IExtractorSync } from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
+import * as pm from '../phantom/master';
+import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
+
+var bsjsFiles = [
+  '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
+  '../../BigSemanticsJavaScript/bsjsCore/FieldOps.js',
+  '../../BigSemanticsJavaScript/bsjsCore/Extractor.js',
+  '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
+];
+
+declare var extractMetadataSync: IExtractorSync;
+
+export default class BSPhantom extends BigSemantics {
+  private master: pm.Master;
+  private options: any;
 
   constructor(repoSource: any, options: any) {
-    super();
-    var that = this;
     if (!options) {
       options = {};
     }
+    
+    options.extractor = (() => {
+      var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
+        var smmd = simpl.serialize(mmd);
+        var agent = this.master.randomAgent();
+        var page = agent.createPage();
+      
+        page.open(resp.location)
+            .injectJs(bsjsFiles)
+            .evaluate(function(smmd) {
+              var mmd = simpl.deserialize(smmd);
+              if ('meta_metadata' in mmd
+                  && mmd['meta_metadata']
+                  && mmd['meta_metadata']['name']) {
+                mmd = mmd['meta_metadata'];
+              }
+              
+              var resp = {
+                code: 200,
+                entity: document,
+                location: document.location.href
+              };
+              
+              return extractMetadataSync(resp, mmd as MetaMetadata, null, null);
+            }, smmd)
+          .then(result => callback(null, result))
+          .close()
+          .catch(err => callback(err, null));
+      };
+      
+      return extractor;
+    })();
+    
     if (!options.downloader) {
       options.downloader = new downloader.BaseDownloader();
     }
-    that.downloader = options.downloader;
-
-    that.repoMan = new bigsemantics.RepoMan(repoSource, options);
-    that.repoMan.onReady(function(err, repoMan) {
-      if (err) { that.setError(err); return; }
-
-      var host = options.host || 'localhost';
-      var port = options.port || 8002;
-      pd.createPhantomExtractor(host, port, null, function(err, extractor) {
-        if (err) { that.setError(err); return; }
-
-        that.extractor = extractor; 
-        options.extractor = extractor;
-        options.repoMan = repoMan;
-        that.bs = new bigsemantics.BigSemantics(null, options);
-        that.bs.onReady(function(err, bs) {
-          if (err) { that.setError(err); return; }
-
-          that.setReady();
-        });
-      });
-    });
+    
+    super(repoSource, options);
+    
+    this.master = new pm.Master();
   }
-
-  loadMetadata(location, options, callback) {
-    this.bs.loadMetadata(location, options, callback);
-  }
-
-  loadInitialMetadata(location, options, callback) {
-    this.bs.loadInitialMetadata(location, options, callback);
-  }
-
-  loadMmd(name, options, callback) {
-    this.bs.loadMmd(name, options, callback);
-  }
-
-  selectMmd(location, options, callback) {
-    this.bs.selectMmd(location, options, callback);
-  }
-
 }
-
-export = BSPhantom;
-

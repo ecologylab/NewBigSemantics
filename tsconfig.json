@@ -2,7 +2,8 @@
   "compilerOptions": {
     "module": "commonjs",
     "rootDir": "src",
-    "outDir": "build"
+    "outDir": "build",
+    "target": "es6"
   },
   "exclude": [
     "node_modules",
@@ -11,8 +12,8 @@
 
     "BigSemanticsJavaScript",
 
-    "src/bscore",
-    "src/old-phantom",
-    "src/quality"
+    //"src/bscore",
+    "src/old-phantom"
+    //"src/quality"
   ]
 }

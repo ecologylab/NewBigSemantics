@@ -1,8 +1,8 @@
 // Calculate coverage.
 
-import fs = require('fs');
-import path = require('path');
-import coverage = require('./coverage');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as coverage from './coverage';
 
 var resultDir = 'result';
 
@@ -49,7 +49,7 @@ function main() {
     var total = results[0];
     var covered = results[1];
     var rate = covered / total;
-    console.log([url, total, covered, rate].join('\t'));
+    console.log([url, total, covered.toFixed(2), rate.toFixed(3)].join('\t'));
   }
 }
 

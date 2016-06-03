@@ -1,7 +1,4 @@
 // Calculate coverage score.
-
-/// <reference path="../../typings/tsd.d.ts" />
-
 import editDistance = require('./edit-distance');
 
 export var fieldsToSkip = [
@@ -36,14 +33,27 @@ export function scalarCoverage(baseline_val: any, target_val: any) {
   if (baseline_val === target_val) {
     return 1;
   }
+    
+  if(typeof baseline_val == 'string') {
+    if(baseline_val.length > 100)
+      baseline_val = (baseline_val as string).substr(0, 100) + "...";
+  }
+  
+  if(typeof baseline_val == 'string') {
+    if(target_val.length > 100)
+      target_val = (target_val as string).substr(0, 100) + "...";
+  }
+  
   if (normalize(baseline_val) === normalize(target_val)) {
     return 0.9;
   }
+  
   if (typeof baseline_val == 'string'
       && typeof target_val == 'string'
       && editDistance(baseline_val, target_val) < baseline_val.length / 2) {
     return 0.5;
   }
+  
   if (typeof baseline_val == typeof target_val) {
     return 0.2;
   }
@@ -59,11 +69,17 @@ export function objectCoverage(baseline_obj: Object, target_obj: any) {
   var keys = Object.keys(baseline_obj);
   for (var i in keys) {
     var key = keys[i];
-    if (key in fieldsToSkip) { continue; }
+    if (fieldsToSkip.indexOf(key) !== -1) { continue; }
 
     var baseline_val = baseline_obj[key];
+    
     var target_val = (typeof target_obj == 'object' && target_obj != null) ? target_obj[key] : null;
     var results = coverage(baseline_val, target_val);
+    
+    if(results[0] != results[1]) {
+      console.log("Mismatch in key '" + keys[i] + "' - " + results[0] + " != " + results[1]);
+    }
+    
     total += results[0];
     covered += results[1];
   }
@@ -78,8 +94,22 @@ export function arrayCoverage(baseline_arr: Array<any>, target_arr: any) {
 
   for (var i in baseline_arr) {
     var baseline_val = baseline_arr[i];
-    var target_val = (target_arr instanceof Array) ? target_arr[i] : null;
-    var results = coverage(baseline_val, target_val);
+    
+    var results = [0, 0];
+    if(target_arr instanceof Array) {
+      var maxObject = null;
+      for(var target_obj of target_arr) {
+        var newResults = coverage(baseline_val, target_obj);
+        
+        if(newResults[1] > results[1]) {
+          results = newResults;
+          maxObject = target_obj;
+        }
+      }
+    } else {
+      var target_val = (target_arr instanceof Array) ? target_arr[i] : null;
+      results = coverage(baseline_val, target_val);
+    }
     total += results[0];
     covered += results[1];
   }

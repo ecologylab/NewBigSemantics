@@ -1,12 +1,10 @@
 // Downloader
 
-/// <reference path='../typings/tsd.d.ts' />
-
 import * as request from 'request';
 
-import * as bigsemantics from '../bigsemantics/bsjsCore/bstypes.d.ts';
-import { ParsedURL } from '../bigsemantics/bsjsCore/ParsedURL.d.ts';
-import { IDownloader } from '../bigsemantics/bsjsCore/Downloader.d.ts';
+import * as bigsemantics from '../../BigSemanticsJavaScript/bsjsCore/bstypes';
+import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
+import { IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
 
 export class BaseDownloader implements IDownloader {
 
@@ -33,6 +31,10 @@ export class BaseDownloader implements IDownloader {
       }
     }
     return false;
+  }
+  
+  setDomainIntervals() {
+    
   }
 
   httpGet(location, options, callback) {
@@ -66,5 +68,4 @@ export class BaseDownloader implements IDownloader {
       BaseDownloader.addOtherLocation(result, r['uri'].href);
     });
   }
-
 }
