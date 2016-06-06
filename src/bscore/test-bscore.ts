@@ -14,7 +14,7 @@ bs.onReady((err, that) => {
   bs.loadMetadata(options.host, null, function(err, result) {
     if (err) { console.error(err); return; }
 
-    console.log("Result: ", result.metadata);
+    console.log("Result: ", JSON.stringify(result.metadata));
   });
 });
 

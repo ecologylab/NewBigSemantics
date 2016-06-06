@@ -1,14 +1,12 @@
 // Downloader
-
 import * as request from 'request';
 
-import * as bigsemantics from '../../BigSemanticsJavaScript/bsjsCore/bstypes';
 import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
-import { IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
+import { IDownloader, Response } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
 
 export class BaseDownloader implements IDownloader {
 
-  static parseContentType(resp: bigsemantics.Response, contentTypeHeader: string) {
+  static parseContentType(resp: Response, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
     if (matches) {
       resp.contentType = matches[1];
@@ -16,7 +14,7 @@ export class BaseDownloader implements IDownloader {
     }
   }
 
-  static addOtherLocation(resp: bigsemantics.Response, otherLocation: string): boolean {
+  static addOtherLocation(resp: Response, otherLocation: string): boolean {
     if (otherLocation && otherLocation.length > 0) {
       if (otherLocation != resp.location) {
         if (!resp.otherLocations) {
@@ -33,13 +31,11 @@ export class BaseDownloader implements IDownloader {
     return false;
   }
   
-  setDomainIntervals() {
-    
-  }
+  setDomainIntervals() { }
 
   httpGet(location, options, callback) {
     var purl = new ParsedURL(location);
-    var result: bigsemantics.Response = { location: location, code: 0 };
+    var result: Response = { location: location, code: 0 };
 
     var rOpts: any = {
       method: 'GET',

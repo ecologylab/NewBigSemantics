@@ -34,29 +34,25 @@ export function scalarCoverage(baseline_val: any, target_val: any) {
     return 1;
   }
     
-  if(typeof baseline_val == 'string') {
-    if(baseline_val.length > 100)
-      baseline_val = (baseline_val as string).substr(0, 100) + "...";
-  }
-  
-  if(typeof baseline_val == 'string') {
-    if(target_val.length > 100)
-      target_val = (target_val as string).substr(0, 100) + "...";
-  }
-  
   if (normalize(baseline_val) === normalize(target_val)) {
     return 0.9;
   }
   
-  if (typeof baseline_val == 'string'
-      && typeof target_val == 'string'
-      && editDistance(baseline_val, target_val) < baseline_val.length / 2) {
-    return 0.5;
+  if (typeof baseline_val == 'string' && typeof target_val == 'string') {
+    /* && editDistance(baseline_val, target_val) < baseline_val.length / 2*/ 
+    //return 0.5
+    var distance = editDistance(baseline_val, target_val);
+    var val = 1 - (distance / Math.max(baseline_val.length, target_val.length));
+    
+    //return a minimum of 0.2, since we give values of the same type 0.2 anyways
+    if(val < 0.2) return 0.2;
+    return val;
   }
   
   if (typeof baseline_val == typeof target_val) {
     return 0.2;
   }
+  
   return 0;
 }
 

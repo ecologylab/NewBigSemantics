@@ -29,7 +29,6 @@ function startService() {
         
         if(url) {
             var options = {};
-            //var result = yield promisify('loadMetadata', bs);//(url, options);
             var result = yield promiseLoad(url, options);
             this.body = result.metadata;
         } else {
