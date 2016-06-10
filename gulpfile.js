@@ -3,6 +3,7 @@
 var gulp = require('gulp');
 var gutil = require('gulp-util');
 var ts = require('gulp-typescript');
+var jasmine = require('gulp-jasmine');
 
 var tsProject = ts.createProject('tsconfig.json');
 
@@ -15,9 +16,13 @@ gulp.task('copy-files', function() {
     "src/dpool/script/*",
     "src/phantom/static/*",
     "src/phantom/*.js",
-    "src/bscore/test/*.html"
+    "src/bscore/test/*.html",
   ];
   return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
+});
+
+gulp.task('test', function() {
+  gulp.src('build/bscore/test/ExtractorTest.js').pipe(jasmine())
 });
 
 gulp.task('default', ['tsc', 'copy-files']);

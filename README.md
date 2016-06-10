@@ -11,3 +11,8 @@ The new BigSemantics with a focus on supporting web-based applications.
 6. Install TypeScript definitions: <code>typings install</code>.
 7. Build with <code>gulp</code>
 8. Run compiled JavaScript file with Node: <code>cd build/phantom && node test-master.js</code>.
+
+## Testing
+
+1. Build with <code>gulp</code>
+2. Run tests with <code>gulp test</code>

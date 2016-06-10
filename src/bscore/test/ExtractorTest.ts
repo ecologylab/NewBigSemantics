@@ -6,10 +6,10 @@ var options = { host: 'file://' + path.resolve(__dirname, 'test/amazon.html') };
 
 // Files to inject for extraction
 var bsjsFiles = [
-  '../../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
-  '../../../BigSemanticsJavaScript/bsjsCore/FieldOps.js',
-  '../../../BigSemanticsJavaScript/bsjsCore/Extractor.js',
-  '../../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BSUtils.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/FieldOps.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Extractor.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js'),
 ];
 
 declare var extractMetadataSync: any;
