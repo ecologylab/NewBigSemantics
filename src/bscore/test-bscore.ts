@@ -16,5 +16,4 @@ bs.onReady((err, that) => {
 
     console.log("Result: ", JSON.stringify(result.metadata));
   });
-});
-
+});;

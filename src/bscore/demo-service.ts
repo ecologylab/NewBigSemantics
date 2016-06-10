@@ -1,7 +1,7 @@
 var http = require('http');
 import * as koa from 'koa';
 
-var downloader = require('./downloader');
+import { BaseDownloader } from './downloader';
 import BSPhantom from './bscore';
 
 var repoSource = {
@@ -9,7 +9,7 @@ var repoSource = {
 };
 
 var options = {
-  downloader: new downloader.BaseDownloader()
+  downloader: new BaseDownloader()
 };
 
 var bs = new BSPhantom(repoSource, options);

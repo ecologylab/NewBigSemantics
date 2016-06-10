@@ -5,7 +5,6 @@ import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
 import { IDownloader, Response } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
 
 export class BaseDownloader implements IDownloader {
-
   static parseContentType(resp: Response, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
     if (matches) {
@@ -13,7 +12,7 @@ export class BaseDownloader implements IDownloader {
       resp.charset = matches[3];
     }
   }
-
+  
   static addOtherLocation(resp: Response, otherLocation: string): boolean {
     if (otherLocation && otherLocation.length > 0) {
       if (otherLocation != resp.location) {

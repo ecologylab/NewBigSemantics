@@ -2,18 +2,18 @@
 //
 // WIP.
 
-import downloader = require('./downloader');
-
 import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
 import BigSemantics from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
-import { IBigSemantics, MetaMetadata } from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
 import RepoMan from '../../BigSemanticsJavaScript/bsjsCore/RepoMan';
-import { Downloader, IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
 import Readyable from '../../BigSemanticsJavaScript/bsjsCore/Readyable';
+import { IBigSemantics, MetaMetadata } from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
 import { IExtractor, IExtractorSync } from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
+import { Downloader, IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
+import { BaseDownloader } from './downloader';
 import * as pm from '../phantom/master';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 
+// Files to inject for extraction
 var bsjsFiles = [
   '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
   '../../BigSemanticsJavaScript/bsjsCore/FieldOps.js',
@@ -26,7 +26,7 @@ declare var extractMetadataSync: IExtractorSync;
 export default class BSPhantom extends BigSemantics {
   private master: pm.Master;
   private options: any;
-
+  
   constructor(repoSource: any, options: any) {
     if (!options) {
       options = {};
@@ -56,16 +56,16 @@ export default class BSPhantom extends BigSemantics {
               
               return extractMetadataSync(resp, mmd as MetaMetadata, null, null);
             }, smmd)
-          .then(result => callback(null, result))
-          .close()
-          .catch(err => callback(err, null));
+            .then(result => callback(null, result))
+            .close()
+            .catch(err => callback(err, null));
       };
       
       return extractor;
     })();
     
     if (!options.downloader) {
-      options.downloader = new downloader.BaseDownloader();
+      options.downloader = new BaseDownloader();
     }
     
     super(repoSource, options);
