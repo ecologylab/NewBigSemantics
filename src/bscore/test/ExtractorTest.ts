@@ -128,7 +128,8 @@ describe("Without inheritance", () => {
                     xpaths: [".//span[@class='a-size-base a-text-bold']"],
                     kids: []
                   }
-                }]
+                }],
+                scope: {}
               }
             }]
           }
