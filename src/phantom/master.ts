@@ -9,6 +9,7 @@ import * as http from 'http';
 import * as express from 'express';
 import * as SocketIO from 'socket.io';
 import * as Promise from 'bluebird';
+import * as path from 'path';
 
 // Default port for Master's internal web / websocket server.
 export const webPort = 10080;
@@ -44,7 +45,7 @@ export class Master extends events.EventEmitter {
     this.app = express();
     this.server = http.createServer(this.app);
     this.io = SocketIO(this.server);
-    this.app.use('/', express.static('static'));
+    this.app.use('/', express.static(path.resolve(__dirname, 'static')));
     this.server.listen(this.options.masterPort || webPort);
 
     for (var i = 0; i < (this.options.numberOfInitialAgents || 1); ++i) {
@@ -139,7 +140,7 @@ export class Agent extends events.EventEmitter {
 
     if (!this.options.noNewProcess) {
       var args = [
-        this.options.pactFile || 'pact.js',
+        this.options.pactFile || path.resolve(__dirname, 'pact.js'),
         this.id,
         this.options.host || 'localhost',
         '' + (this.options.port || webPort),
