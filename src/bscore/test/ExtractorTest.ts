@@ -44,6 +44,8 @@ function extract(url: string, mmd: any, callback: Function) {
 }
 
 describe("Without inheritance", () => {
+  var pageURL = "file://" + path.resolve(__dirname, "amazon.html");
+
   it("can extract scalar", function(done) {
     var mmd = JSON.stringify({
       meta_metadata: {
@@ -61,7 +63,7 @@ describe("Without inheritance", () => {
       }
     });
 
-    extract('file://' + path.resolve(__dirname, 'amazon.html'), mmd, function(err, metadata) {
+    extract(pageURL, mmd, function(err, metadata) {
       expect(err).toBe(null);
 
       expect(metadata.scalar_test.title).toBe("Discovery");
@@ -98,7 +100,7 @@ describe("Without inheritance", () => {
       }
     });
 
-    extract('file://' + path.resolve(__dirname, 'amazon.html'), mmd, function(err, metadata) {
+    extract(pageURL, mmd, function(err, metadata) {
       expect(err).toBe(null);
 
       var md = metadata.composite_test;
@@ -136,7 +138,7 @@ describe("Without inheritance", () => {
       }
     });
 
-    extract('file://' + path.resolve(__dirname, 'amazon.html'), mmd, function(err, metadata) {
+    extract(pageURL, mmd, function(err, metadata) {
       expect(err).toBe(null);
 
       var md = metadata.collection_test;
@@ -146,8 +148,158 @@ describe("Without inheritance", () => {
       done();
     });
   }, 5000);
+});
 
-  /*it("can extract composite/collection without xpath", () => {
+describe("With JS modifying page", function() {
+  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+  
+  it("can extract unmodified content", function(done) {
+    var mmd = JSON.stringify({
+      meta_metadata: {
+        name: "mod",
+        kids: [
+          {
+            scalar: {
+              name: "target",
+              xpaths: [
+                "//p[@id='target']"
+              ]
+            }
+          }
+        ]
+      }
+    });
 
-  });*/
+    extract(pageURL, mmd, function(err, metadata) {
+      if(err) return;
+      expect(metadata.mod.target).toBe("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
+      done();
+    });
+  }, 5000);
+});
+
+describe("With xpath variable", function() {
+  var pageURL = "file://" + path.resolve(__dirname, "wikipedia.html");
+
+  it("can extract Wikipedia section text", function(done) {
+    var mmd = JSON.stringify({
+      meta_metadata: {
+        name: "sections_text",
+        kids: [{
+          collection: {
+            name: "sections",
+            xpaths: ["//div[@id='mw-content-text']/h2"],
+            kids: [{
+              composite: {
+                name: "section",
+                type: "section",
+                kids: [{
+                  scalar: {
+                    name: "title",
+                    scalar_type: "String",
+                    xpaths: ["./span[@id]"],
+                    kids: []
+                  },
+                  collection: {
+                    name: "paragraphs",
+                    xpaths: ["./following-sibling::p[preceding-sibling::h2[1]=../h2[$i]]"],
+                    kids: [{
+                      composite: {
+                        name: "paragraphs",
+                        kids: [{
+                          scalar: {
+                            name: "text",
+                            xpaths: ["."],
+                            kids: []
+                          }
+                        }]
+                      }
+                    }]
+                  }
+                }]
+              }
+            }]
+          }
+        }]
+      }
+    });
+
+    extract(pageURL, mmd, function(err, metadata) {
+      if(err) return;
+
+      var md = metadata.sections_text;
+
+      if(md.sections[0].paragraphs && md.sections[0].paragraphs.text) {
+        expect(md.sections[0].paragraphs[0].text).toContain("Velcro is the brainchild of");
+        expect(md.sections[1].paragraphs[0].text).toContain("In 1958, de Mestral filed");
+        expect(md.sections[2].paragraphs[0].text).toContain("Velcro Companies provides");
+        expect(md.sections[3].paragraphs[0].text).toContain("The Neeson Cripps Academy");
+        expect(md.sections[4].paragraphs[0].text).toContain("1968 - Velcro brand fasteners");
+      } else {
+        expect(md.sections[0].paragraphs).not.toBe(undefined);
+      }
+
+      done();
+    });
+  }, 5000);
+});
+
+describe("With extract_as_html", function() {
+  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+
+  it("can extract html", function(done) {
+    var mmd = JSON.stringify({
+      meta_metadata: {
+        name: "html_test",
+        kids: [
+          {
+            scalar: {
+              name: "text",
+              extract_as_html: "true",
+              xpaths: [
+                "//p[@id='withInnerHtml']"
+              ]
+            }
+          }
+        ]
+      }
+    });
+
+    extract(pageURL, mmd, function(err, metadata) {
+      if(err) return;
+
+      expect(metadata.html_test.text).toBe("<b>Bold Tag</b>");
+      done();
+    });
+  }, 5000);
+});
+
+describe("With extracted URL", function() {
+  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+
+  it("will extract as normalized URL", function(done) {
+    var mmd = JSON.stringify({
+      meta_metadata: {
+        name: "url_test",
+        kids: [
+          {
+            scalar: {
+              name: "location",
+              scalar_type: "ParsedURL",
+              xpaths: [
+                "//a[@id='link']/@href"
+              ]
+            }
+          }
+        ]
+      }
+    });
+
+    extract(pageURL, mmd, function(err, metadata) {
+      if(err) return;
+
+      expect(metadata.url_test.location).toBe("http://www.amazon.com/Lexar-Professional-UHS-I-Rescue-Software/dp/B00VBNQK0E");
+      done();
+    });
+  }, 5000);
 });

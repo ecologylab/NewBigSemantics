@@ -8,6 +8,43 @@ export var fieldsToSkip = [
   'log_record',
 ];
 
+
+class Logger {
+  indent_level: number;
+  stopped: boolean;
+
+  constructor() {
+    this.indent_level = 0;
+  }
+
+  indent() {
+    this.indent_level++;
+  }
+
+  dedent() {
+    this.indent_level--;
+  }
+
+  stop() {
+    this.stopped = true;
+  }
+
+  start() {
+    this.stopped = false;
+  }
+
+  log(str: string) {
+    if(this.stopped) return;
+    
+    for(var i = 0; i < this.indent_level; i++) {
+      str = "  " + str;
+    }
+
+    console.log(str);
+  }
+}
+
+var logger = new Logger();
 // Compares a target scalar value against a baseline scalar value.
 //
 // Assumes that the baseline value is not undefined or null.
@@ -33,7 +70,6 @@ export function scalarCoverage(baseline_val: any, target_val: any) {
   if (baseline_val === target_val) {
     return 1;
   }
-    
   if (normalize(baseline_val) === normalize(target_val)) {
     return 0.9;
   }
@@ -70,11 +106,14 @@ export function objectCoverage(baseline_obj: Object, target_obj: any) {
     var baseline_val = baseline_obj[key];
     
     var target_val = (typeof target_obj == 'object' && target_obj != null) ? target_obj[key] : null;
+    logger.log(keys[i] + ":");
+    logger.indent();
     var results = coverage(baseline_val, target_val);
-    
     if(results[0] != results[1]) {
-      console.log("Mismatch in key '" + keys[i] + "' - " + results[0] + " != " + results[1]);
+      logger.log("Mismatch in key '" + keys[i] + "' - " + results[0] + " != " + results[1]);
     }
+
+    logger.dedent();
     
     total += results[0];
     covered += results[1];
@@ -88,15 +127,17 @@ export function objectCoverage(baseline_obj: Object, target_obj: any) {
 export function arrayCoverage(baseline_arr: Array<any>, target_arr: any) {
   var total = 0, covered = 0;
 
+  logger.log("Array:");
+  logger.indent();
+  logger.stop();
+  var maxObject = null;
+  var results = [0, 0];
   for (var i in baseline_arr) {
     var baseline_val = baseline_arr[i];
     
-    var results = [0, 0];
     if(target_arr instanceof Array) {
-      var maxObject = null;
       for(var target_obj of target_arr) {
         var newResults = coverage(baseline_val, target_obj);
-        
         if(newResults[1] > results[1]) {
           results = newResults;
           maxObject = target_obj;
@@ -110,6 +151,11 @@ export function arrayCoverage(baseline_arr: Array<any>, target_arr: any) {
     covered += results[1];
   }
 
+  logger.start();
+  coverage(baseline_val, maxObject);
+
+  logger.log("Array Results " + results);
+  logger.dedent();
   return [ total, covered ];
 }
 
@@ -149,4 +195,3 @@ export function coverage(baseline: any, target: any) {
 
   return [ total, covered ];
 }
-
