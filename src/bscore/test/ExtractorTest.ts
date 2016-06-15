@@ -39,8 +39,7 @@ function extract(url: string, mmd: any, callback: Function) {
         return extractMetadataSync(resp, mmd, null, null);
       }, mmd)
       .then(result => callback(null, result))
-      .close()
-      .catch(err => callback(err, null));
+      .close();
 }
 
 describe("Without inheritance", () => {
@@ -171,7 +170,7 @@ describe("With JS modifying page", function() {
     });
 
     extract(pageURL, mmd, function(err, metadata) {
-      if(err) return;
+      expect(err).toBe(null);
       expect(metadata.mod.target).toBe("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
       done();
     });
@@ -199,7 +198,7 @@ describe("With xpath variable", function() {
                     scalar_type: "String",
                     xpaths: ["./span[@id]"],
                     kids: []
-                  },
+                  }}, {
                   collection: {
                     name: "paragraphs",
                     xpaths: ["./following-sibling::p[preceding-sibling::h2[1]=../h2[$i]]"],
@@ -208,6 +207,7 @@ describe("With xpath variable", function() {
                         name: "paragraphs",
                         kids: [{
                           scalar: {
+                            scalar_type: "String",
                             name: "text",
                             xpaths: ["."],
                             kids: []
@@ -225,11 +225,11 @@ describe("With xpath variable", function() {
     });
 
     extract(pageURL, mmd, function(err, metadata) {
-      if(err) return;
-
+      expect(err).toBe(null);
       var md = metadata.sections_text;
 
-      if(md.sections[0].paragraphs && md.sections[0].paragraphs.text) {
+      // To make the test fail without causing a TypeError
+      if(md.sections[0].paragraphs && md.sections[0].paragraphs[0].text) {
         expect(md.sections[0].paragraphs[0].text).toContain("Velcro is the brainchild of");
         expect(md.sections[1].paragraphs[0].text).toContain("In 1958, de Mestral filed");
         expect(md.sections[2].paragraphs[0].text).toContain("Velcro Companies provides");
@@ -237,6 +237,9 @@ describe("With xpath variable", function() {
         expect(md.sections[4].paragraphs[0].text).toContain("1968 - Velcro brand fasteners");
       } else {
         expect(md.sections[0].paragraphs).not.toBe(undefined);
+
+        if(md.sections[0].paragraphs)
+          expect(md.sections[0].paragraphs[0].text).not.toBe(undefined);
       }
 
       done();
