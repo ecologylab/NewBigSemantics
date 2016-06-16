@@ -9,12 +9,13 @@ import * as xml from 'xml';
 import DownloaderPool from './dpool';
 
 function toTaskProto(query: any): any {
-  return {
+  let result: any = {
     url: query.url,
     userAgent: query.agent,
-    maxAttempts: Number(query.attempts),
-    msPerAttempts: Number(query.timeout),
   };
+  if (query.attempts) { result.maxAttempts = Number(query.attempts); }
+  if (query.timeout) { result.msPerAttempt = Number(query.timeout); }
+  return result;
 }
 
 DownloaderPool.create((err, dpool) => {
@@ -68,12 +69,14 @@ DownloaderPool.create((err, dpool) => {
     });
   });
 
+  // for backward compatibility
   app.get('/DownloaderPool/echo/get', (req, resp) => {
     var msg = req.query.msg;
     resp.send('Echo Message: ' + msg);
     resp.end();
   });
 
+  // for backward compatibility
   app.get('/DownloaderPool/page/download.json', (req, resp) => {
     if (!req.query.url || req.query.url === '') {
       resp.status(400);
@@ -138,6 +141,7 @@ DownloaderPool.create((err, dpool) => {
     }); // dpool.newTask() callback
   }); // app.get() callback
 
+  // for backward compatibility
   app.get('/DownloaderPool/page/download.xml', (req, resp) => {
     if (!req.query.url || req.query.url === '') {
       resp.status(400);
@@ -229,4 +233,3 @@ DownloaderPool.create((err, dpool) => {
   });
 
 });
-
