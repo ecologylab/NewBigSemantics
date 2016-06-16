@@ -15,10 +15,10 @@ var bsjsFiles = [
 declare var extractMetadataSync: any;
 declare var simpl: any;
 
-var master = new pm.Master();
-var agent = master.randomAgent();
+var master: pm.Master;
 
 function extract(url: string, mmd: any, callback: Function) {
+  var agent = master.randomAgent();
   var page = agent.createPage();
   page.open(url)
       .injectJs(bsjsFiles)
@@ -38,12 +38,20 @@ function extract(url: string, mmd: any, callback: Function) {
         
         return extractMetadataSync(resp, mmd, null, null);
       }, mmd)
-      .then(result => callback(null, result))
+      .then(result => { callback(null, result); master.shutdown() })
       .close();
 }
 
 describe("Without inheritance", () => {
   var pageURL = "file://" + path.resolve(__dirname, "amazon.html");
+
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done: DoneFn) {
+    master.shutdown().then(() => done());
+  }, 5000);
 
   it("can extract scalar", function(done) {
     var mmd = JSON.stringify({
@@ -152,6 +160,14 @@ describe("Without inheritance", () => {
 describe("With JS modifying page", function() {
   var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
   
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done: DoneFn) {
+    master.shutdown().then(() => done());
+  }, 5000);
+
   it("can extract unmodified content", function(done) {
     var mmd = JSON.stringify({
       meta_metadata: {
@@ -179,6 +195,14 @@ describe("With JS modifying page", function() {
 
 describe("With xpath variable", function() {
   var pageURL = "file://" + path.resolve(__dirname, "wikipedia.html");
+
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done: DoneFn) {
+    master.shutdown().then(() => done());
+  }, 5000);
 
   it("can extract Wikipedia section text", function(done) {
     var mmd = JSON.stringify({
@@ -250,6 +274,14 @@ describe("With xpath variable", function() {
 describe("With extract_as_html", function() {
   var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
 
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done: DoneFn) {
+    master.shutdown().then(() => done());
+  }, 5000);
+
   it("can extract html", function(done) {
     var mmd = JSON.stringify({
       meta_metadata: {
@@ -279,6 +311,14 @@ describe("With extract_as_html", function() {
 
 describe("With extracted URL", function() {
   var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done: DoneFn) {
+    master.shutdown().then(() => done());
+  }, 5000);
 
   it("will extract as normalized URL", function(done) {
     var mmd = JSON.stringify({
