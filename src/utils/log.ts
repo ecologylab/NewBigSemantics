@@ -1,7 +1,7 @@
-class Log {
-  name: string;
+export interface Log {
   datetime: Date;
-  args: any;
+  name: string;
+  args?: any;
 }
 
 /*import * as bunyan from 'bunyan';

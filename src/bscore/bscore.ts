@@ -24,10 +24,9 @@ var bsjsFiles = [
 declare var extractMetadataSync: IExtractorSync;
 
 export default class BSPhantom extends BigSemantics {
-  private master: pm.Master;
-  private options: any;
-  
   constructor(repoSource: any, options: any) {
+    var master = new pm.Master();
+
     if (!options) {
       options = {};
     }
@@ -35,7 +34,7 @@ export default class BSPhantom extends BigSemantics {
     options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
         var smmd = simpl.serialize(mmd);
-        var agent = this.master.randomAgent();
+        var agent = master.randomAgent();
         var page = agent.createPage();
       
         page.open(resp.location)
@@ -69,7 +68,5 @@ export default class BSPhantom extends BigSemantics {
     }
     
     super(repoSource, options);
-    
-    this.master = new pm.Master();
   }
 }

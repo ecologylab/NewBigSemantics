@@ -149,7 +149,13 @@ pageMethods.evaluate = function(page, msg) {
   }
 }
 
-// TODO handle ResourceRequested
+pageMethods.onResourceRequested = function(requestData, networkRequest) {
+  var url = requestData.url;
+
+  // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
+  if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1)
+    networkRequest.changeUrl("http://api.ecologylab.net:3000/proxy?url=" + url);
+}
 
 pageMethods.close = function(page, msg) {
   page.close();

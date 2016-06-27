@@ -1,8 +1,10 @@
-var http = require('http');
-import * as koa from 'koa';
+import * as http from 'http';
+import * as express from 'express';
 
 import { BaseDownloader } from './downloader';
 import BSPhantom from './bscore';
+
+const PORT = 8000;
 
 var repoSource = {
   url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'
@@ -19,46 +21,22 @@ bs.onReady((err, bs) => {
 });
 
 function startService() {
-    console.log("Starting service");
-    var app = new koa();
-    var promiseLoad = promisify('loadMetadata', bs);
+  console.log("Starting service...");
+  var app = express();
 
-    app.use(function*(next) {
-        var url = this.query['url'];
-        console.log("Received URL: " + url);
-        
-        if(url) {
-            var options = {};
-            var result = yield promiseLoad(url, options);
-            this.body = result.metadata;
-        } else {
-            this.throw(400, "Parameter 'url' required");
-        }
-    }); 
+  app.get('/metadata', (req, res) => {
+    var url = req.query.url;
     
-    app.listen(8000);
-}
+    if(url) {
+      bs.loadMetadata(url, {}, (err, result) => {
+        if(err) { console.log(err); return; }
+        res.send(JSON.stringify(result.metadata));
+      });
+    } else {
+      res.status(400).send("Parameter 'url' required");
+    }
+  });
 
-function promisify(func: Function | string, that: Object): (...args: any[])=>Promise<any> {
-  var f: Function = null;
-
-  if (typeof func === 'function') {
-    f = func;
-  } else if (typeof func === 'string' && typeof that === 'object' && that != null) {
-    f = that[String(func)];
-  }
-  if (typeof f != 'function' ) {
-    throw new Error("Invalid arguments");
-  }
-
-  return function(...args: any[]): Promise<any> {
-    return new Promise(function(resolve: Function, reject: Function) {
-      var callback = function(err: any, ...results: any[]) {
-        if (err) { return reject(err); }
-        resolve.apply(that, results);
-      };
-      args.push(callback);
-      f.apply(that, args);
-    });
-  };
+  app.listen(PORT);
+  console.log("Service started, listening on port " + PORT);
 }

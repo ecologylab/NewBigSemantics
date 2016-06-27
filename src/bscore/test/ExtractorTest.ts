@@ -49,7 +49,7 @@ describe("Without inheritance", () => {
     master = new pm.Master();
   });
 
-  afterEach(function(done: DoneFn) {
+  afterEach(function(done) {
     master.shutdown().then(() => done());
   }, 5000);
 
@@ -164,7 +164,7 @@ describe("With JS modifying page", function() {
     master = new pm.Master();
   });
 
-  afterEach(function(done: DoneFn) {
+  afterEach(function(done) {
     master.shutdown().then(() => done());
   }, 5000);
 
@@ -200,7 +200,7 @@ describe("With xpath variable", function() {
     master = new pm.Master();
   });
 
-  afterEach(function(done: DoneFn) {
+  afterEach(function(done) {
     master.shutdown().then(() => done());
   }, 5000);
 
@@ -278,7 +278,7 @@ describe("With extract_as_html", function() {
     master = new pm.Master();
   });
 
-  afterEach(function(done: DoneFn) {
+  afterEach(function(done) {
     master.shutdown().then(() => done());
   }, 5000);
 
@@ -316,7 +316,7 @@ describe("With extracted URL", function() {
     master = new pm.Master();
   });
 
-  afterEach(function(done: DoneFn) {
+  afterEach(function(done) {
     master.shutdown().then(() => done());
   }, 5000);
 
