@@ -260,6 +260,14 @@ export class Page extends events.EventEmitter {
     return this;
   }
 
+  setIgnoreSuffixes(suffixes: string[]): Page {
+    this.chain(() => {
+      var params = { suffixes: suffixes };
+      return this.sendCmd('setIgnoreSuffixes', params);
+    });
+    return this;
+  }
+
   injectJs(files: string|string[]): Page {
     this.chain(() => {
       var params = { files: files };

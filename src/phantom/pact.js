@@ -98,7 +98,23 @@ function resp(id, result, err) {
 globalMethods.createPage = function(msg) {
   if (assertParams(msg, 'pageId')) {
     var page = webpage.create();
+
     // TODO add listeners for interested events
+    page.onResourceRequested = function(requestData, networkRequest) {
+      var url = requestData.url;
+
+      if(page.ignoreSuffixes) {
+        var ext = url.split('?')[0].split('.').pop();
+        if(page.ignoreSuffixes.indexOf(ext) != -1) {
+          networkRequest.abort();
+        }
+      }
+
+      // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
+      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1)
+        networkRequest.changeUrl("http://api.ecologylab.net:3000/proxy?url=" + url);
+    }
+
     pages[msg.params.pageId] = page;
     resp(msg.id, true);
   }
@@ -112,6 +128,10 @@ pageMethods.open = function(page, msg) {
       resp(msg.id, status);
     });
   }
+}
+
+pageMethods.setIgnoreSuffixes = function(page, msg) {
+  page.ignoreSuffixes = msg.params.suffixes;
 }
 
 pageMethods.setContent = function(page, msg) {
@@ -147,14 +167,6 @@ pageMethods.evaluate = function(page, msg) {
     var result = page.evaluate.apply(page, args);
     resp(msg.id, result);
   }
-}
-
-pageMethods.onResourceRequested = function(requestData, networkRequest) {
-  var url = requestData.url;
-
-  // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
-  if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1)
-    networkRequest.changeUrl("http://api.ecologylab.net:3000/proxy?url=" + url);
 }
 
 pageMethods.close = function(page, msg) {
