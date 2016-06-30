@@ -22,7 +22,11 @@ gulp.task('copy-files', function() {
 });
 
 gulp.task('test', function() {
-  gulp.src('build/bscore/test/ExtractorTest.js').pipe(jasmine())
+  gulp.src('build/bscore/test/ExtractorTest.js').pipe(jasmine());
+});
+
+gulp.task('testHttpRespParser', function() {
+  gulp.src('build/dpool/test/testHttpRespParser.js').pipe(jasmine());
 });
 
 gulp.task('default', ['tsc', 'copy-files']);

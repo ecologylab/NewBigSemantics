@@ -12,8 +12,6 @@
 
     "BigSemanticsJavaScript",
 
-    //"src/bscore",
     "src/old-phantom"
-    //"src/quality"
   ]
 }

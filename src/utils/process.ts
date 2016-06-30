@@ -22,19 +22,27 @@ export function spawn(cmd: string,
       finished = true;
       error = err;
       p.disconnect();
-      callback(error, null);
+      callback(error, {
+        cmd: cmd,
+        args: args,
+        stdout: stdout ? stdout.toString() : null,
+        stderr: stderr ? stderr.toString() : null,
+      });
     }
   });
-  p.on('close', (code) => {
+  p.on('close', (code, signal) => {
     if (!finished) {
       finished = true;
-      if (code != 0) {
+      if (typeof code === 'number' && code != 0) {
         error = new Error("Non-zero return code: " + code);
       }
       callback(error, {
         code: code,
-        stdout: stdout,
-        stderr: stderr,
+        signal: signal,
+        cmd: cmd,
+        args: args,
+        stdout: stdout ? stdout.toString() : null,
+        stderr: stderr ? stderr.toString() : null,
       });
     }
   });
