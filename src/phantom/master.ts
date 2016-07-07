@@ -168,6 +168,15 @@ export class Agent extends events.EventEmitter {
       s.on('response', msg => {
         this.emit('resp[' + msg.id + ']', msg);
       });
+
+      s.on('console', msg => {
+        this.pages[msg.id].newConsoleMessage(msg.text);
+      });
+
+      s.on('error', msg => {
+        this.pages[msg.id].newErrorMessage(msg.text, msg.params.trace);
+      });
+
       // TODO add more listeners on s, if any
       return s;
     });
@@ -206,6 +215,9 @@ export class Page extends events.EventEmitter {
   private agent: Agent;
   private socket: Promise<SocketIO.Socket>;
   private msgId = 1;
+
+  private consoleCallback: (msg: string) => void;
+  private errorCallback: (err: string, trace: string) => void;
 
   // a promise for a future value which will be the result of most recent
   // operation on this webpage
@@ -257,6 +269,30 @@ export class Page extends events.EventEmitter {
         return this.sendCmd('open', params);
       }
     });
+    return this;
+  }
+
+  newConsoleMessage(msg: string) {
+    if(this.consoleCallback) {
+      this.consoleCallback(msg);
+    }
+  }
+
+  newErrorMessage(err: string, trace: string) {
+    if(this.errorCallback) {
+      this.errorCallback(err, trace);
+    }
+  }
+
+  onConsole(callback: (msg: string) => void): Page {
+    this.consoleCallback = callback;
+
+    return this;
+  }
+
+  onError(callback: (msg: string, trace: string) => void): Page {
+    this.errorCallback = callback;
+
     return this;
   }
 

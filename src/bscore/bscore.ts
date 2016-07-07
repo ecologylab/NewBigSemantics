@@ -47,6 +47,8 @@ export default class BSPhantom extends BigSemantics {
         var page = agent.createPage();
         
         page.setIgnoredSuffixes(ignoreSuffixes)
+            .onConsole(msg => console.log("Console: " + msg))
+            .onError((err, trace) => console.log("Error: " + err))
             .open(resp.location)
             .injectJs(bsjsFiles)
             .evaluateAsync(function(mmdRepo) {

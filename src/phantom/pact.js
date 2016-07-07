@@ -79,7 +79,7 @@ controlPage.open(masterUrl, function(status) {
   }, id, host, port, pactFile);
 });
 
-function filterLocation(url, callback) {
+/*function filterLocation(url, callback) {
   var id = url.substr(0, 20) + Date.now();
   filterCallbacks[id] = callback;
 
@@ -89,7 +89,7 @@ function filterLocation(url, callback) {
       url: url
     })    
   }, url, id);
-}
+}*/
 
 function assertParams(msg) {
   for (var i = 1; i < arguments.length; ++i) {
@@ -112,10 +112,21 @@ function respond(id, err, result) {
   }, id, result, err);
 }
 
+function sendMsg(id, type, msg, params) {
+  controlPage.evaluate(function(type, id, msg, params) {
+    window.socket.emit(type, {
+      id: id,
+      msg: msg,
+      params: params
+    })
+  }, type, id, msg, params);
+}
+
 // global methods
 
 globalMethods.createPage = function(msg) {
   if (assertParams(msg, 'pageId')) {
+    var pageId = msg.params.pageId;
     var page = webpage.create();
 
     page.onCallback = function(msg) {
@@ -147,12 +158,11 @@ globalMethods.createPage = function(msg) {
     }
 
     page.onConsoleMessage = function(msg, lineNum, sourceId) {
-      console.log('CONSOLE: ' + msg);
+      sendMsg(pageId, 'console', msg);
     };
     
     page.onError = function(msg, trace) {
-      console.log('PAGE ERROR: ' + msg);
-      console.log(JSON.stringify(trace));
+      sendMsg(pageId, 'error', msg, { trace: trace });
     };
     
     pages[msg.params.pageId] = page;
