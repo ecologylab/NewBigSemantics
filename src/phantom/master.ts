@@ -260,10 +260,10 @@ export class Page extends events.EventEmitter {
     return this;
   }
 
-  setIgnoreSuffixes(suffixes: string[]): Page {
+  setIgnoredSuffixes(suffixes: string[]): Page {
     this.chain(() => {
       var params = { suffixes: suffixes };
-      return this.sendCmd('setIgnoreSuffixes', params);
+      return this.sendCmd('setIgnoredSuffixes', params);
     });
     return this;
   }
@@ -283,6 +283,17 @@ export class Page extends events.EventEmitter {
         args: args,
       };
       return this.sendCmd('evaluate', params);
+    });
+    return this;
+  }
+
+  evaluateAsync(fn: Function, ...args: any[]): Page {
+    this.chain(() => {
+      var params = {
+        func: fn.toString(),
+        args: args,
+      };
+      return this.sendCmd('evaluateAsync', params);
     });
     return this;
   }

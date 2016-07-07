@@ -30,7 +30,7 @@ export function nicePResult(pResult: any): any {
   return result;
 }
 
-var logger = bunyan.createLogger({
+export var logger = bunyan.createLogger({
   name: 'dpool-log',
   streams: [
     {

@@ -16,12 +16,21 @@ import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 // Files to inject for extraction
 var bsjsFiles = [
   '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
+  '../../BigSemanticsJavaScript/bsjsCore/Readyable.js',
+  '../../BigSemanticsJavaScript/bsjsCore/ParsedURL.js',
+  '../../BigSemanticsJavaScript/bsjsCore/Downloader.js',
+  '../../BigSemanticsJavaScript/bsjsCore/BSService.js',
+  '../../BigSemanticsJavaScript/bsjsCore/RepoMan.js',
+  '../../BigSemanticsJavaScript/bsjsCore/BigSemantics.js',
   '../../BigSemanticsJavaScript/bsjsCore/FieldOps.js',
   '../../BigSemanticsJavaScript/bsjsCore/Extractor.js',
   '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
 ];
 
 declare var extractMetadataSync: IExtractorSync;
+declare var respond: (err: any, result: any) => void;
+
+var ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga', 'css'];
 
 export default class BSPhantom extends BigSemantics {
   constructor(repoSource: any, options: any) {
@@ -33,28 +42,34 @@ export default class BSPhantom extends BigSemantics {
     
     options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
-        var smmd = simpl.serialize(mmd);
+        var mmdRepo = bs.repoMan.getRepository();
         var agent = master.randomAgent();
         var page = agent.createPage();
-      
-        page.open(resp.location)
+        
+        page.setIgnoredSuffixes(ignoreSuffixes)
+            .open(resp.location)
             .injectJs(bsjsFiles)
-            .evaluate(function(smmd) {
-              var mmd = simpl.deserialize(smmd);
-              if ('meta_metadata' in mmd
+            .evaluateAsync(function(mmdRepo) {
+              // Quick fix because TypeScript changes to BigSemantics_1
+              eval("var bs = new BigSemantics({ str: mmdRepo }, {});");
+
+              bs.selectMmd(document.location.href, {}, function(err, mmd) {
+                if ('meta_metadata' in mmd
                   && mmd['meta_metadata']
                   && mmd['meta_metadata']['name']) {
-                mmd = mmd['meta_metadata'];
-              }
-              
-              var resp = {
-                code: 200,
-                entity: document,
-                location: document.location.href
-              };
-              
-              return extractMetadataSync(resp, mmd as MetaMetadata, null, null);
-            }, smmd)
+                  mmd = mmd['meta_metadata'];
+                }
+                
+                var resp = {
+                  code: 200,
+                  entity: document,
+                  location: document.location.href
+                };
+                
+                var metadata = extractMetadataSync(resp, mmd as MetaMetadata, bs, null);
+                respond(null, metadata);
+              });
+            }, mmdRepo)
             .then(result => callback(null, result))
             .close()
             .catch(err => callback(err, null));

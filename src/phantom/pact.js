@@ -21,6 +21,13 @@ var controlPage = webpage.create();
 
 // namespaces for method handlers
 var globalMethods = {}, pageMethods = {};
+
+// map of page -> ignored suffixes
+var ignoredSuffixes = {};
+
+// map of filter urls -> callbacks
+var filterCallbacks = {};
+
 // set up callback
 controlPage.onCallback = function(msg) {
   if (msg.specialType) {
@@ -51,11 +58,11 @@ controlPage.onCallback = function(msg) {
       var m = pageMethods[msg.method];
       m(page, msg);
     } else {
-      resp(msg.id, null, "Page not found: " + msg.params.pageId);
+      respond(msg.id, "Page not found: " + msg.params.pageId, null);
     }
   } else {
     // error: unknown method
-    resp(msg.id, null, "Unknown method: " + msg.method);
+    respond(msg.id, "Unknown method: " + msg.method, null);
   }
 }
 // connect to master and send 'init' message to declare self
@@ -72,18 +79,30 @@ controlPage.open(masterUrl, function(status) {
   }, id, host, port, pactFile);
 });
 
+function filterLocation(url, callback) {
+  var id = url.substr(0, 20) + Date.now();
+  filterCallbacks[id] = callback;
+
+  controlPage.evaluate(function(url, id) {
+    window.socket.emit('filterLocation', {
+      id: id,
+      url: url
+    })    
+  }, url, id);
+}
+
 function assertParams(msg) {
   for (var i = 1; i < arguments.length; ++i) {
     var name = arguments[i];
     if (!(name in msg.params)) {
-      resp(msg.id, null, "Missing required param: " + name);
+      respond(msg.id, "Missing required param: " + name, null);
       return false;
     }
   }
   return true;
 }
 
-function resp(id, result, err) {
+function respond(id, err, result) {
   controlPage.evaluate(function(id, result, err) {
     window.socket.emit('response', {
       id: id,
@@ -99,24 +118,45 @@ globalMethods.createPage = function(msg) {
   if (assertParams(msg, 'pageId')) {
     var page = webpage.create();
 
-    // TODO add listeners for interested events
+    page.onCallback = function(msg) {
+      if(msg.specialType) {
+        switch(msg.specialType) {
+          case "resp":
+            respond(msg.id, msg.err, msg.result);
+            break;
+        }
+      }
+    }
+    
     page.onResourceRequested = function(requestData, networkRequest) {
       var url = requestData.url;
 
-      if(page.ignoreSuffixes) {
+      if(page.ignoredSuffixes) {
         var ext = url.split('?')[0].split('.').pop();
-        if(page.ignoreSuffixes.indexOf(ext) != -1) {
+        if(page.ignoredSuffixes.indexOf(ext) != -1) {
+          console.log("Ignoring request for " + url);
           networkRequest.abort();
+          return;
         }
       }
 
       // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
-      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1)
+      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1) {
         networkRequest.changeUrl("http://api.ecologylab.net:3000/proxy?url=" + url);
+      }
     }
 
+    page.onConsoleMessage = function(msg, lineNum, sourceId) {
+      console.log('CONSOLE: ' + msg);
+    };
+    
+    page.onError = function(msg, trace) {
+      console.log('PAGE ERROR: ' + msg);
+      console.log(JSON.stringify(trace));
+    };
+    
     pages[msg.params.pageId] = page;
-    resp(msg.id, true);
+    respond(msg.id, null, true);
   }
 }
 
@@ -125,19 +165,20 @@ globalMethods.createPage = function(msg) {
 pageMethods.open = function(page, msg) {
   if (assertParams(msg, 'url')) {
     page.open(msg.params.url, msg.params.settings, function(status) {
-      resp(msg.id, status);
+      respond(msg.id, null, status);
     });
   }
 }
 
-pageMethods.setIgnoreSuffixes = function(page, msg) {
-  page.ignoreSuffixes = msg.params.suffixes;
+pageMethods.setIgnoredSuffixes = function(page, msg) {
+  page.ignoredSuffixes = msg.params.suffixes;
+  respond(msg.id, null, status);
 }
 
 pageMethods.setContent = function(page, msg) {
   if (assertParams(msg, 'content', 'url')) {
     page.setContent(msg.params.content, msg.params.url);
-    resp(msg.id);
+    respond(msg.id);
   }
 }
 
@@ -153,7 +194,7 @@ pageMethods.injectJs = function(page, msg) {
     } else {
       result = page.injectJs(msg.params.files);
     }
-    resp(msg.id, result);
+    respond(msg.id, null, result);
   }
 }
 
@@ -165,12 +206,29 @@ pageMethods.evaluate = function(page, msg) {
     args.push(func);
     args.push.apply(args, msg.params.args || []);
     var result = page.evaluate.apply(page, args);
-    resp(msg.id, result);
+    respond(msg.id, null, result);
+  }
+}
+
+pageMethods.evaluateAsync = function(page, msg) {
+  if (assertParams(msg, 'func')) {
+    var closure = function(id, func, params) {
+      function respond(err, result) {
+        window.callPhantom({ specialType: "resp", id: id, result: result, err: err });
+      }
+
+      eval("f = " + func);
+      
+      f.apply(f, params);
+    }
+
+    var args = [closure, msg.id, msg.params.func, msg.params.args || []]; // func, arg1, arg2, ..., argN
+    page.evaluate.apply(page, args);
   }
 }
 
 pageMethods.close = function(page, msg) {
   page.close();
   delete pages[msg.params.pageId];
-  resp(msg.id);
+  respond(msg.id);
 }

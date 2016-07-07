@@ -1,15 +1,9 @@
-import { Log } from '../utils/log';
-
+import Log from '../utils/log';
+import { base32enc } from '../utils/codec';
 
 export interface Task {
   id: string;
-
   url: string;
-  userAgent: string;
-  msPerAttempt: number;
-  maxAttempts: number;
-
-  //response?: HttpResponse;
 
   logs?: Array<Log>;
 
@@ -19,8 +13,29 @@ export interface Task {
   // - finished: successfully done, and reported.
   // - terminated: unsuccessfully stopped after attempt(s), and reported.
   state?: string;
-
-  attempts?: number;
-
-  callback?: (error: Error, task: Task)=>void;
 }
+
+export function newTask(url: string): Task {
+  return {
+    id: base32enc(Date.now() + url).substr(0, 10),
+    url: url,
+
+    logs: [],
+
+    state: "ready"
+  }
+}
+
+export function taskLog(task: Task, name: string, args?: any) {
+  if(!task.logs) {
+    task.logs = new Array<Log>();
+  }
+
+  task.logs.push({
+    datetime: new Date(),
+    name: name,
+    args: args
+  });
+}
+
+export default Task;
