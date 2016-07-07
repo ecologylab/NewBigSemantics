@@ -34,7 +34,7 @@ export default class WorkerMan {
 
     this.workers = new Array<Worker>();
 
-    var pdir = path.dirname(__dirname);
+    var pdir = path.normalize(__dirname);
     this.workerScript = path.join(pdir, 'script', 'all');
     this.heartbeatScript = path.join(pdir, 'script', 'heartbeat');
     logger.info({ path: this.workerScript, }, "worker script found");
@@ -99,8 +99,8 @@ export default class WorkerMan {
     spawn('bash', args, null, (err, res) => {
       if (res) {
         presult.code = res.code;
-        presult.stdout = res.stdout;
-        presult.stderr = res.stderr;
+        presult.stdout = new Buffer(res.stdout);
+        presult.stderr = new Buffer(res.stderr);
       }
       callback(err, presult);
     });
