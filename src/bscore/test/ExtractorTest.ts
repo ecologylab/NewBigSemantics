@@ -6,6 +6,7 @@ var options = { host: 'file://' + path.resolve(__dirname, 'test/amazon.html') };
 
 // Files to inject for extraction
 var bsjsFiles = [
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/ParsedURL.js'),
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BSUtils.js'),
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/FieldOps.js'),
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Extractor.js'),
@@ -17,29 +18,23 @@ declare var simpl: any;
 
 var master: pm.Master;
 
-function extract(url: string, mmd: any, callback: Function) {
+function extract(url: string, mmdStr: any, callback: Function) {
   var agent = master.randomAgent();
   var page = agent.createPage();
   page.open(url)
       .injectJs(bsjsFiles)
-      .evaluate(function(mmd) {
-        var mmd = simpl.deserialize(mmd);
-        if ('meta_metadata' in mmd
-            && mmd['meta_metadata']
-            && mmd['meta_metadata']['name']) {
-          mmd = mmd['meta_metadata'];
-        }
-        
+      .evaluate(function(mmdStr) {
+        var mmd = simpl.deserialize(mmdStr);
         var resp = {
           code: 200,
           entity: document,
           location: document.location.href
         };
-        
         return extractMetadataSync(resp, mmd, null, null);
-      }, mmd)
-      .then(result => { callback(null, result); master.shutdown() })
-      .close();
+      }, mmdStr)
+      .then(result => { callback(null, result) })
+      .close()
+      .finally(() => { master.shutdown() });
 }
 
 describe("Without inheritance", () => {
@@ -61,6 +56,7 @@ describe("Without inheritance", () => {
           {
             scalar: {
               name: "title",
+              scalar_type: "String",
               xpaths: [
                 "//h1[@id='title' or @class='parseasinTitle ']"
               ]
@@ -85,20 +81,24 @@ describe("Without inheritance", () => {
         kids: [{
           composite: {
             name: "bestseller_list_rank",
+            type: "review",
             xpaths: ["//li[@id='SalesRank']"],
             kids: [{
               scalar: {
                 name: "title",
+                scalar_type: "String",
                 xpaths: [".//b/a"]
               }
             }, {
               scalar: {
                 name: "location",
+                scalar_type: "ParsedURL",
                 xpaths: [".//b/a/@href"]
               }
             }, {
               scalar: {
                 name: "overall_rating",
+                scalar_type: "String",
                 xpaths: ["./ul/li/span[@class='zg_hrsr_rank']"]
               }
             }]
@@ -116,7 +116,7 @@ describe("Without inheritance", () => {
       expect(md.bestseller_list_rank.title).toBe("French Pop");
       done();
     });
-    
+
   }, 5000);
 
   it("can extract collection", function(done) {
@@ -126,6 +126,7 @@ describe("Without inheritance", () => {
         kids: [{
           collection: {
             name: "reviews",
+            child_type: "review",
             xpaths: ["//div[@id='revMHRL']/div[@id]"],
             kids: [{
               composite: {
@@ -134,8 +135,8 @@ describe("Without inheritance", () => {
                 kids: [{
                   scalar: {
                     name: "title",
-                    xpaths: [".//span[@class='a-size-base a-text-bold']"],
-                    kids: []
+                    scalar_type: "String",
+                    xpaths: [".//span[@class='a-size-base a-text-bold']"]
                   }
                 }]
               }
@@ -159,7 +160,7 @@ describe("Without inheritance", () => {
 
 describe("With JS modifying page", function() {
   var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
-  
+
   beforeEach(function() {
     master = new pm.Master();
   });
@@ -211,6 +212,7 @@ describe("With xpath variable", function() {
         kids: [{
           collection: {
             name: "sections",
+            child_type: "section",
             xpaths: ["//div[@id='mw-content-text']/h2"],
             kids: [{
               composite: {
@@ -220,21 +222,21 @@ describe("With xpath variable", function() {
                   scalar: {
                     name: "title",
                     scalar_type: "String",
-                    xpaths: ["./span[@id]"],
-                    kids: []
+                    xpaths: ["./span[@id]"]
                   }}, {
                   collection: {
                     name: "paragraphs",
+                    child_type: "paragraph",
                     xpaths: ["./following-sibling::p[preceding-sibling::h2[1]=../h2[$i]]"],
                     kids: [{
                       composite: {
                         name: "paragraphs",
+                        type: "paragraph",
                         kids: [{
                           scalar: {
-                            scalar_type: "String",
                             name: "text",
-                            xpaths: ["."],
-                            kids: []
+                            scalar_type: "String",
+                            xpaths: ["."]
                           }
                         }]
                       }

@@ -107,13 +107,31 @@ globalMethods.createPage = function(msg) {
         var ext = url.split('?')[0].split('.').pop();
         if(page.ignoreSuffixes.indexOf(ext) != -1) {
           networkRequest.abort();
+          return;
         }
       }
 
       // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
-      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1)
-        networkRequest.changeUrl("http://api.ecologylab.net:3000/proxy?url=" + url);
+      /* Commented out for testing. Needs to be changed so that we can
+      /* dynamically turn it on / off and specify whitelist / blacklist
+      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1) {
+        var newUrl = "http://api.ecologylab.net:3000/proxy?url=" + url;
+        console.log("changing url to " + newUrl);
+        networkRequest.changeUrl(newUrl);
+      }
+      */
     }
+
+    // TODO this should be dynamically turned on / off too.
+    /*
+    page.onResourceError = function(resourceError) {
+      console.log("resource error: " + JSON.stringify(resourceError, null, 4));
+    }
+
+    page.onResourceTimeout = function(request) {
+      console.log("resource timeout: " + JSON.stringify(request, null, 4));
+    }
+    */
 
     pages[msg.params.pageId] = page;
     resp(msg.id, true);
