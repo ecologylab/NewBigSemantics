@@ -21,7 +21,9 @@ var master: pm.Master;
 function extract(url: string, mmdStr: any, callback: Function) {
   var agent = master.randomAgent();
   var page = agent.createPage();
-  page.open(url)
+  page.onConsole(msg => console.log("Console: " + msg))
+      .onError((err, trace) => { console.log("Error: " + err)})
+      .open(url)
       .injectJs(bsjsFiles)
       .evaluate(function(mmdStr) {
         var mmd = simpl.deserialize(mmdStr);
