@@ -31,6 +31,8 @@ declare var extractMetadataSync: IExtractorSync;
 declare var respond: (err: any, result: any) => void;
 
 var ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga', 'css'];
+var proxyURL = "http://api.ecologylab.net:3000/proxy?url=";
+var proxyBlacklist = ['ecologylab.net'];
 
 export default class BSPhantom extends BigSemantics {
   constructor(repoSource: any, options: any) {
@@ -42,35 +44,41 @@ export default class BSPhantom extends BigSemantics {
     
     options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
-        var mmdRepo = bs.repoMan.getRepository();
+        var mmdRepo = bs.getRepoString();
         var agent = master.randomAgent();
         var page = agent.createPage();
         
         page.setIgnoredSuffixes(ignoreSuffixes)
             .onConsole(msg => console.log("Console: " + msg))
             .onError((err, trace) => console.log("Error: " + err))
+            .setProxy(proxyURL)
+            .setProxyBlacklist(proxyBlacklist)
             .open(resp.location)
             .injectJs(bsjsFiles)
             .evaluateAsync(function(mmdRepo) {
               // Quick fix because TypeScript changes to BigSemantics_1
-              eval("var bs = new BigSemantics({ str: mmdRepo }, {});");
+              var repo = simpl.deserialize(mmdRepo);
+              eval("var bs = new BigSemantics({ repo: repo }, {});");
 
-              bs.selectMmd(document.location.href, {}, function(err, mmd) {
-                if ('meta_metadata' in mmd
-                  && mmd['meta_metadata']
-                  && mmd['meta_metadata']['name']) {
-                  mmd = mmd['meta_metadata'];
-                }
-                
-                var resp = {
-                  code: 200,
-                  entity: document,
-                  location: document.location.href
-                };
-                
-                var metadata = extractMetadataSync(resp, mmd as MetaMetadata, bs, null);
-                respond(null, metadata);
+              (bs as BigSemantics).onReady(function(err, bs) {
+                  bs.selectMmd(document.location.href, {}, function(err, mmd) {
+                  if ('meta_metadata' in mmd
+                    && mmd['meta_metadata']
+                    && mmd['meta_metadata']['name']) {
+                    mmd = mmd['meta_metadata'];
+                  }
+                  
+                  var resp = {
+                    code: 200,
+                    entity: document,
+                    location: document.location.href
+                  };
+                  
+                  var metadata = extractMetadataSync(resp, mmd as MetaMetadata, bs, null);
+                  respond(null, metadata);
+                });
               });
+              
             }, mmdRepo)
             .then(result => callback(null, result))
             .close()

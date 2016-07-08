@@ -116,7 +116,7 @@ function sendMsg(id, type, msg, params) {
   controlPage.evaluate(function(type, id, msg, params) {
     window.socket.emit(type, {
       id: id,
-      msg: msg,
+      text: msg,
       params: params
     })
   }, type, id, msg, params);
@@ -151,15 +151,31 @@ globalMethods.createPage = function(msg) {
         }
       }
 
-      // Prevent proxying proxy requests and don't proxy filesystem requests (which are used for testing)
-      /* Commented out for testing. Needs to be changed so that we can
-      /* dynamically turn it on / off and specify whitelist / blacklist
-      if(url.indexOf("ecologylab.net:3000/proxy") === -1 && url.indexOf("file://") === -1) {
-        var newUrl = "http://api.ecologylab.net:3000/proxy?url=" + url;
-        console.log("changing url to " + newUrl);
-        networkRequest.changeUrl(newUrl);
+      if(page.proxy && url.indexOf("file://") === -1) {
+        var redirect = true;
+
+        if(page.proxyBlacklist) {
+          for(var i in page.proxyBlacklist) {
+            if(url.indexOf(page.proxyBlacklist[i]) !== -1) {
+              redirect = false;
+            }
+          }  
+        } else if(page.proxyWhitelist) {
+          redirect = false;
+
+          for(var i in page.proxyWhitelist) {
+            if(url.indexOf(page.proxyWhitelist[i]) !== -1) {
+              redirect = true;
+            }
+          }  
+        }
+
+        if(redirect) {
+          var newUrl = page.proxy + url;
+          console.log("changing url to " + newUrl);
+          networkRequest.changeUrl(newUrl);
+        }
       }
-      */
     }
 
     // TODO this should be dynamically turned on / off too.
@@ -191,14 +207,34 @@ globalMethods.createPage = function(msg) {
 pageMethods.open = function(page, msg) {
   if (assertParams(msg, 'url')) {
     page.open(msg.params.url, msg.params.settings, function(status) {
-      respond(msg.id, null, status);
+      respond(msg.id);
     });
   }
 }
 
 pageMethods.setIgnoredSuffixes = function(page, msg) {
   page.ignoredSuffixes = msg.params.suffixes;
-  respond(msg.id, null, status);
+  respond(msg.id);
+}
+
+pageMethods.setProxy = function(page, msg) {
+  console.log("Setting proxy" + msg.params.proxyURL);
+  page.proxy = msg.params.proxyURL;
+
+  respond(msg.id);
+}
+
+pageMethods.setProxyBlacklist = function(page, msg) {
+  console.log("Setting proxy blacklist " + JSON.stringify(msg.params.patterns));
+  page.proxyBlacklist = msg.params.patterns;
+
+  respond(msg.id);
+}
+
+pageMethods.setProxyWhitelist = function(page, msg) {
+  page.proxyWhitelist = msg.params.patterns;
+
+  respond(msg.id);
 }
 
 pageMethods.setContent = function(page, msg) {

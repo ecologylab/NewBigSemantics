@@ -304,6 +304,33 @@ export class Page extends events.EventEmitter {
     return this;
   }
 
+  setProxy(proxyURL: string): Page {
+    this.chain(() => {
+      var params = { proxyURL: proxyURL };
+      return this.sendCmd('setProxy', params);
+    });
+
+    return this;
+  }
+
+  setProxyBlacklist(patterns: string[]): Page {
+    this.chain(() => {
+      var params = { patterns: patterns };
+      return this.sendCmd('setProxyBlacklist', params);
+    });
+
+    return this;
+  }
+
+  setProxyWhitelist(patterns: string[]): Page {
+    this.chain(() => {
+      var params = { patterns: patterns };
+      return this.sendCmd('setProxyWhitelist', params);
+    });
+
+    return this;
+  }
+
   injectJs(files: string|string[]): Page {
     this.chain(() => {
       var params = { files: files };
