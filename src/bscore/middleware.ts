@@ -109,7 +109,7 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
 
         function mmdCallback(err, result) {
             var response = {
-                wrapper: result
+                wrapper: result["meta_metadata"]
             };
 
             res.header("Content-Type", "application/json");
