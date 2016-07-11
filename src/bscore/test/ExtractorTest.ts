@@ -20,8 +20,13 @@ var timeout = 5000;
 function extract(url: string, mmdStr: any, callback: Function) {
   var agent = master.randomAgent();
   var page = agent.createPage();
-  page.onConsole(msg => console.log("Console: " + msg))
-      .onError((err, trace) => { console.log("Error: " + err)})
+  page.onConsole(msg => {
+    // Stop cross-origin error spam
+    if(msg.indexOf('Cross-origin') == -1)
+      console.log("Console: " + msg);
+  });
+
+  page.onError((err, trace) => { console.log("Error: " + err)})
       .open(url)
       .injectJs(bsjsFiles)
       .evaluate(function(mmdStr) {

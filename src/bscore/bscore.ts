@@ -42,16 +42,19 @@ export default class BSPhantom extends BigSemantics {
       options = {};
     }
     
+    var mmdRepo = null;
     options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
-        var mmdRepo = bs.getRepoString();
         var agent = master.randomAgent();
         var page = agent.createPage();
         
+        if(!mmdRepo)
+          mmdRepo = simpl.serialize(bs.getRepo());
+
         page.setIgnoredSuffixes(ignoreSuffixes)
             .onConsole(msg => console.log("Console: " + msg))
             .onError((err, trace) => console.log("Error: " + err))
-            .setProxy(proxyURL)
+            //.setProxy(proxyURL)
             .setProxyBlacklist(proxyBlacklist)
             .open(resp.location)
             .injectJs(bsjsFiles)
@@ -91,7 +94,7 @@ export default class BSPhantom extends BigSemantics {
     if (!options.downloader) {
       options.downloader = new BaseDownloader();
     }
-    
+
     super(repoSource, options);
   }
 }
