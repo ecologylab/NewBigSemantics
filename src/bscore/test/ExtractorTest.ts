@@ -2,8 +2,6 @@ import BSPhantom from '../bscore';
 import * as pm from '../../phantom/master';
 import * as path from 'path';
 
-var options = { host: 'file://' + path.resolve(__dirname, 'test/amazon.html') };
-
 // Files to inject for extraction
 var bsjsFiles = [
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/ParsedURL.js'),
@@ -17,6 +15,7 @@ declare var extractMetadataSync: any;
 declare var simpl: any;
 
 var master: pm.Master;
+var timeout = 5000;
 
 function extract(url: string, mmdStr: any, callback: Function) {
   var agent = master.randomAgent();
@@ -34,9 +33,9 @@ function extract(url: string, mmdStr: any, callback: Function) {
         };
         return extractMetadataSync(resp, mmd, null, null);
       }, mmdStr)
-      .then(result => { callback(null, result) })
-      .close()
-      .finally(() => { master.shutdown() });
+      .then(result => { callback(null, result); })
+      .catch(err => { callback(err, null); })
+      .close();
 }
 
 describe("Without inheritance", () => {
@@ -48,7 +47,7 @@ describe("Without inheritance", () => {
 
   afterEach(function(done) {
     master.shutdown().then(() => done());
-  }, 5000);
+  }, timeout);
 
   it("can extract scalar", function(done) {
     var mmd = JSON.stringify({
@@ -74,7 +73,7 @@ describe("Without inheritance", () => {
       expect(metadata.scalar_test.title).toBe("Discovery");
       done();
     });
-  }, 5000);
+  }, timeout);
 
   it("can extract composite", function(done) {
     var mmd = JSON.stringify({
@@ -118,8 +117,7 @@ describe("Without inheritance", () => {
       expect(md.bestseller_list_rank.title).toBe("French Pop");
       done();
     });
-
-  }, 5000);
+  }, timeout);
 
   it("can extract collection", function(done) {
     var mmd = JSON.stringify({
@@ -157,7 +155,7 @@ describe("Without inheritance", () => {
       expect(md.reviews[2].title).toBe("Brilliant CD! Best of the year so far.");
       done();
     });
-  }, 5000);
+  }, timeout);
 });
 
 describe("With JS modifying page", function() {
@@ -169,7 +167,7 @@ describe("With JS modifying page", function() {
 
   afterEach(function(done) {
     master.shutdown().then(() => done());
-  }, 5000);
+  }, timeout);
 
   it("can extract unmodified content", function(done) {
     var mmd = JSON.stringify({
@@ -193,7 +191,7 @@ describe("With JS modifying page", function() {
       expect(metadata.mod.target).toBe("Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
       done();
     });
-  }, 5000);
+  }, timeout);
 });
 
 describe("With xpath variable", function() {
@@ -205,7 +203,7 @@ describe("With xpath variable", function() {
 
   afterEach(function(done) {
     master.shutdown().then(() => done());
-  }, 5000);
+  }, timeout);
 
   it("can extract Wikipedia section text", function(done) {
     var mmd = JSON.stringify({
@@ -272,7 +270,7 @@ describe("With xpath variable", function() {
 
       done();
     });
-  }, 5000);
+  }, timeout);
 });
 
 describe("With extract_as_html", function() {
@@ -284,7 +282,7 @@ describe("With extract_as_html", function() {
 
   afterEach(function(done) {
     master.shutdown().then(() => done());
-  }, 5000);
+  }, timeout);
 
   it("can extract html", function(done) {
     var mmd = JSON.stringify({
@@ -305,12 +303,12 @@ describe("With extract_as_html", function() {
     });
 
     extract(pageURL, mmd, function(err, metadata) {
-      if(err) return;
+      expect(err).toBe(null);
 
       expect(metadata.html_test.text).toBe("<b>Bold Tag</b>");
       done();
     });
-  }, 5000);
+  }, timeout);
 });
 
 describe("With extracted URL", function() {
@@ -322,7 +320,7 @@ describe("With extracted URL", function() {
 
   afterEach(function(done) {
     master.shutdown().then(() => done());
-  }, 5000);
+  }, timeout);
 
   it("will extract as normalized URL", function(done) {
     var mmd = JSON.stringify({
@@ -343,10 +341,10 @@ describe("With extracted URL", function() {
     });
 
     extract(pageURL, mmd, function(err, metadata) {
-      if(err) return;
+      expect(err).toBe(null);
 
       expect(metadata.url_test.location).toBe("http://www.amazon.com/Lexar-Professional-UHS-I-Rescue-Software/dp/B00VBNQK0E");
       done();
     });
-  }, 5000);
+  }, timeout);
 });
