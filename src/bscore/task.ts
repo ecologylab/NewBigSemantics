@@ -1,5 +1,5 @@
 import Log from '../utils/log';
-import { base32enc } from '../utils/codec';
+import { base32enc, sha256 } from '../utils/codec';
 
 export interface Task {
   id: string;
@@ -15,27 +15,25 @@ export interface Task {
   state?: string;
 }
 
-export function newTask(url: string): Task {
-  return {
-    id: base32enc(Date.now() + url).substr(0, 10),
-    url: url,
+export class Task {
+  constructor(url: string) {
+    this.id = base32enc(sha256(Date.now() + url)).substr(0, 10);
+    this.url = url;
 
-    logs: [],
-
-    state: "ready"
-  }
-}
-
-export function taskLog(task: Task, name: string, args?: any) {
-  if(!task.logs) {
-    task.logs = new Array<Log>();
+    this.state = "ready";
   }
 
-  task.logs.push({
-    datetime: new Date(),
-    name: name,
-    args: args
-  });
+  log(name: string, args?: any) {
+    if(!this.logs) {
+      this.logs = [];
+    }
+
+    this.logs.push({
+      datetime: new Date(),
+      name: name,
+      args: args
+    });
+  }
 }
 
 export default Task;

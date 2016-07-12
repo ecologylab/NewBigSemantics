@@ -1,6 +1,7 @@
 import BSPhantom from '../bscore';
 import * as pm from '../../phantom/master';
 import * as path from 'path';
+import * as fs from 'fs';
 
 // Files to inject for extraction
 var bsjsFiles = [
@@ -9,38 +10,113 @@ var bsjsFiles = [
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/FieldOps.js'),
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Extractor.js'),
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js'),
+
+  // needed for using full mmdrepo
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Readyable.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Downloader.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BSService.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/RepoMan.js'),
+  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BigSemantics.js'),
 ];
 
-declare var extractMetadataSync: any;
+declare var extractMetadata: 
+  (resp, mmd, bs, options, callback: (err: Error, metadata: any) => void) => void;
 declare var simpl: any;
+declare var bs: any;
+declare var BigSemantics: any;
+declare var respond: (err: any, result: any) => void;
+
+interface MetadataResult {
+  (err: Error, metadata: any): void;
+}
 
 var master: pm.Master;
 var timeout = 5000;
 
-function extract(url: string, mmdStr: any, callback: Function) {
+function openPage(uri: string): pm.Page {
   var agent = master.randomAgent();
   var page = agent.createPage();
+
   page.onConsole(msg => {
     // Stop cross-origin error spam
     if(msg.indexOf('Cross-origin') == -1)
       console.log("Console: " + msg);
   });
 
-  page.onError((err, trace) => { console.log("Error: " + err)})
-      .open(url)
-      .injectJs(bsjsFiles)
-      .evaluate(function(mmdStr) {
-        var mmd = simpl.deserialize(mmdStr);
-        var resp = {
-          code: 200,
-          entity: document,
-          location: document.location.href
-        };
-        return extractMetadataSync(resp, mmd, null, null);
-      }, mmdStr)
-      .then(result => { callback(null, result); })
-      .catch(err => { callback(err, null); })
-      .close();
+  page.onError((err, trace) => { 
+    console.log("Error: " + err)
+  });
+
+  return page.open(uri).injectJs(bsjsFiles);
+}
+                                                     
+function extract(uri: string, mmd: string, callback: MetadataResult) {
+  var page = openPage(uri);
+
+  page.evaluateAsync(function(smmd) {
+    var mmd = simpl.deserialize(smmd);
+
+    var resp = {
+      code: 200,
+      entity: document,
+      location: document.location.href
+    };
+  
+    extractMetadata(resp, mmd, null, null, function(err, metadata) {
+      respond(err, metadata);
+    });
+  }, mmd)
+    .then(result => { callback(null, result); })
+    .catch(err => { callback(err, null); })
+    .close();
+}
+
+function extractWithRepo(uri: string, mmd: string, mmdName: string, 
+                                          callback: MetadataResult) {
+  var mmdRepo = fs.readFileSync(
+    path.resolve(__dirname, 
+      '../../../BigSemanticsJavaScript/bsjsCore/test/mmdrepository.json'
+    ),
+    'utf8'
+  );
+  
+  var page = openPage(uri);
+
+  page.evaluateAsync(function(smmd, mmdName, mmdRepo) {
+    var repo = simpl.deserialize(mmdRepo);
+    var bs = new BigSemantics({ repo: repo }, {});
+
+    bs.onReady(function(err, bs) {
+      if(smmd) {
+        doExtraction(simpl.deserialize(smmd), bs);
+      } else {
+        bs.loadMmd(mmdName, {}, function(err, mmd) {
+          if ('meta_metadata' in mmd
+            && mmd['meta_metadata']
+            && mmd['meta_metadata']['name']) {
+            mmd = mmd['meta_metadata'];
+          }
+
+          doExtraction(mmd, bs);
+        });
+      }
+    });
+
+    function doExtraction(mmd, bs) {
+      var resp = {
+        code: 200,
+        entity: document,
+        location: document.location.href
+      };
+
+      extractMetadata(resp, mmd, bs, null, function(err, metadata) {
+        respond(err, metadata);
+      });
+    }
+  }, mmd, mmdName, mmdRepo)
+    .then(result => { callback(null, result); })
+    .catch(err => { callback(err, null); })
+    .close();
 }
 
 describe("Without inheritance", () => {
@@ -345,10 +421,31 @@ describe("With extracted URL", function() {
       }
     });
 
-    extract(pageURL, mmd, function(err, metadata) {
+    extractWithRepo(pageURL, mmd, null, function(err, metadata) {
       expect(err).toBe(null);
 
       expect(metadata.url_test.location).toBe("http://www.amazon.com/Lexar-Professional-UHS-I-Rescue-Software/dp/B00VBNQK0E");
+      done();
+    });
+  }, timeout * 2);
+});
+
+describe("With inheritance", function() {
+  var pageURL = "file://" + path.resolve(__dirname, "amazon.html");
+
+  beforeEach(function() {
+    master = new pm.Master();
+  });
+
+  afterEach(function(done) {
+    master.shutdown().then(() => done());
+  }, timeout);
+
+  it("can ignore unwanted inherited fields on composites", function(done) {
+    extractWithRepo(pageURL, null, 'amazon_product', function(err, metadata) {
+      expect(err).toBe(null);
+
+      expect(metadata.amazon_product.companion_products[0].department).toBeUndefined();
       done();
     });
   }, timeout);

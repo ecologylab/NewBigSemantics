@@ -64,7 +64,7 @@ export default class BSPhantom extends BigSemantics {
               eval("var bs = new BigSemantics({ repo: repo }, {});");
 
               (bs as BigSemantics).onReady(function(err, bs) {
-                  bs.selectMmd(document.location.href, {}, function(err, mmd) {
+                bs.selectMmd(document.location.href, {}, function(err, mmd) {
                   if ('meta_metadata' in mmd
                     && mmd['meta_metadata']
                     && mmd['meta_metadata']['name']) {
@@ -81,7 +81,6 @@ export default class BSPhantom extends BigSemantics {
                   respond(null, metadata);
                 });
               });
-              
             }, mmdRepo)
             .then(result => callback(null, result))
             .close()

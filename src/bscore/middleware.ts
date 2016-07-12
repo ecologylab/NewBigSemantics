@@ -1,7 +1,7 @@
 import BSPhantom from './bscore';
 import logger from './logging';
 import { BaseDownloader } from './downloader';
-import { Task, newTask, taskLog } from './task';
+import { Task } from './task';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 import * as express from 'express'; 
 
@@ -49,17 +49,17 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
         var url = req.query.url || req.query.uri;
 
         if (url) {
-            let task = newTask(url);
+            let task = new Task(url);
 
-            taskLog(task, "task initiated");
+            task.log("task initiated");
             bs.loadMetadata(url, {}, (err, result) => {
                 if (err) {
-                    taskLog(task, "task terminated", { err: err });
-                    logger.error("task failed", task);
+                    task.log("task terminated", { err: err });
+                    logger.error(task, "task failed");
                 }
 
                 if (result.metadata) {
-                    taskLog(task, "task completed successfully");
+                    task.log("task completed successfully");
 
                     var response: Response = { 
                         metadata: result.metadata
@@ -67,8 +67,8 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
 
                     res.header("Content-Type", "application/json");
                     res.send(getResponse(req, response, format));
-
-                    logger.info("successful task", task);
+                    
+                    logger.info(task, "successful task");
                 }
             });
         } else {
