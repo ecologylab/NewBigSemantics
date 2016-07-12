@@ -30,12 +30,12 @@ interface Response {
 }
 
 function getResponse(req: express.Request, resp: Response, format?: string): string {
-  if (format == "jsonp") {
-    resp.appId = req.query.aid;
-    resp.userId = req.query.uid;
-    resp.sessionId = req.query.sid;
-    resp.reqId = req.query.rid;
+  resp.appId = req.query.aid;
+  resp.userId = req.query.uid;
+  resp.sessionId = req.query.sid;
+  resp.reqId = req.query.rid;
 
+  if (format == "jsonp") {
     var callback = req.query.callback || null;
 
     return callback + "(" + simpl.serialize(resp) + ");";
