@@ -3,10 +3,15 @@
 import * as express from 'express';
 import * as bsservice from './middleware';
 
-const PORT = 8000;
+const PORT = process.env.BS_SERVICE_PORT || 8000;
 
 var app = express();
 bsservice.create((err, res) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+
   app.use("/metadata.json", res.metadataJson);
   app.use("/metadata.jsonp", res.metadataJsonp);
 
