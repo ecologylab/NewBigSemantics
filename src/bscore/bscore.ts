@@ -39,12 +39,12 @@ export default class BSPhantom extends BigSemantics {
   private master: pm.Master;
 
   constructor(repoSource: any, options: any) {
-    super(repoSource, options);
-    this.options = options || {};
-    this.master = this.options.master || new pm.Master();
+    //super(repoSource, options);
+    options = options || {};
+    var master = options.master || new pm.Master();
 
     var mmdRepo = null;
-    this.options.extractor = (() => {
+    options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
         var agent = this.master.randomAgent();
         var page = agent.createPage();
@@ -102,5 +102,8 @@ export default class BSPhantom extends BigSemantics {
     }
 
     super(repoSource, options);
+
+    this.options = options;
+    this.master = master;
   }
 }
