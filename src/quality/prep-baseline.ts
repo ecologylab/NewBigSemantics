@@ -114,8 +114,8 @@ var repoSource = {
 };
 
 // Required so that TypeScript won't complain about this not existing
-declare var extractMetadataSync;
-declare var wgxpath;
+declare var extractMetadata;
+declare var respond: (err: any, result: any) => void;
 
 function createExtractor() {
   var extractor = function (resp, mmd, bigSemantics, options, mcallback: (err: any, result: string | Object) => void) {
@@ -132,7 +132,7 @@ function createExtractor() {
 
     page.open(resp.location)
       .injectJs(clientScripts)
-      .evaluate((smmd) => {
+      .evaluateAsync((smmd) => {
         var mmd = simpl.deserialize(smmd);
         if ('meta_metadata' in mmd
           && mmd['meta_metadata']
@@ -146,7 +146,9 @@ function createExtractor() {
           location: document.location.href
         };
 
-        return JSON.stringify(extractMetadataSync(resp, mmd, null, null));
+        extractMetadata(resp, mmd, null, null, function(err, metadata) {
+          respond(err, JSON.stringify(metadata));  
+        });
       }, smmd)
       .then(result => mcallback(null, JSON.parse(result)))
       .close()
