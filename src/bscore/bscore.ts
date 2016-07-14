@@ -7,7 +7,7 @@ import BigSemantics from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
 import RepoMan from '../../BigSemanticsJavaScript/bsjsCore/RepoMan';
 import Readyable from '../../BigSemanticsJavaScript/bsjsCore/Readyable';
 import { IBigSemantics, MetaMetadata } from '../../BigSemanticsJavaScript/bsjsCore/BigSemantics';
-import { IExtractor, IExtractorSync } from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
+import { IExtractor } from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
 import { Downloader, IDownloader } from '../../BigSemanticsJavaScript/bsjsCore/Downloader';
 import { BaseDownloader } from './downloader';
 import * as pm from '../phantom/master';
@@ -27,7 +27,7 @@ var bsjsFiles = [
   '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js',
 ];
 
-declare var extractMetadataSync: IExtractorSync;
+declare var extractMetadata: IExtractor;
 declare var respond: (err: any, result: any) => void;
 
 var ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga', 'css'];
@@ -83,8 +83,9 @@ export default class BSPhantom extends BigSemantics {
                     location: document.location.href
                   };
 
-                  var metadata = extractMetadataSync(resp, mmd as MetaMetadata, bs, null);
-                  respond(null, metadata);
+                  extractMetadata(resp, mmd as MetaMetadata, bs, null, function(err, metadata) {
+                    respond(err, metadata);
+                  });
                 });
               });
             }, mmdRepo)

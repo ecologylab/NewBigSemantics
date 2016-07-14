@@ -5,7 +5,8 @@ import * as BigSemantics from '../../BigSemanticsJavaScript/bsjsCore/BigSemantic
 import * as Extractor from '../../BigSemanticsJavaScript/bsjsCore/Extractor'
 import * as pm from '../phantom/master';
 
-declare var extractMetadataSync: Extractor.IExtractorSync;
+declare var extractMetadata: Extractor.IExtractor;
+declare var respond: (err: any, result: any) => void;
 
 var bsjsFiles = [
   '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
@@ -28,7 +29,7 @@ export function createPhantomExtractor(master: pm.Master, host: string, options:
 
     page.open(host)
         .injectJs(bsjsFiles)
-        .evaluate(() => {
+        .evaluateAsync(() => {
           var mmd = simpl.deserialize(smmd);
           if ('meta_metadata' in mmd
               && mmd['meta_metadata']
@@ -42,7 +43,9 @@ export function createPhantomExtractor(master: pm.Master, host: string, options:
             location: document.location.href
           };
 
-          return extractMetadataSync(resp, mmd as BigSemantics.MetaMetadata, null, null);
+          extractMetadata(resp, mmd as BigSemantics.MetaMetadata, null, null, function(err, metadata) {
+            respond(err, metadata);
+          });
         })
         .then(result => mcallback(null, result))
         .close()

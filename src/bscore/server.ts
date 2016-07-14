@@ -26,6 +26,8 @@ bsservice.create((err, res) => {
   bsRouter.use("/mmdrepository.json", res.repositoryJson);
   bsRouter.use("/mmdrepository.jsonp", res.repositoryJsonp);
 
+  bsRouter.use(res.errorHandler); 
+  
   app.use("/BigSemanticsService", bsRouter);
 });
 

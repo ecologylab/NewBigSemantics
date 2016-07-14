@@ -18,9 +18,12 @@ export interface MiddlewareSet {
 
   wrapperJson: Middleware;
   wrapperJsonp: Middleware;
+
+  errorHandler: express.ErrorRequestHandler;
 }
 
 interface Response {
+  id?: string;
   repository?: any;
   metadata?: any;
   appId?: string;
@@ -55,25 +58,24 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
       bs.loadMetadata(url, {}, (err, result) => {
         if (err) {
           task.log("task terminated", { err: err });
-          logger.error(task, "task failed");
+          logger.error(task, "metadata extraction task failed");
         }
 
         if (result.metadata) {
           task.log("task completed successfully");
 
           var response: Response = {
+            id: task.id,
             metadata: result.metadata
           };
 
           res.header("Content-Type", "application/json");
           res.send(getResponse(req, response, format));
 
-          logger.info(task, "successful task");
+          logger.info(task, "metadata extraction task succeeded");
         }
       });
     } else {
-      // (?) Next vs. res.status(400).send
-      //res.status(400).send("Parameter 'url' required");
       next(new Error("Parameter 'url' is required."));
     }
   };
@@ -83,12 +85,19 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
 
 function repositoryFactory(bs: BSPhantom, format?: string): Middleware {
   var result: Middleware = function (req, res, next) {
+    let task = new Task(req.baseUrl);
+    task.log("task initiated");
+
     var response = {
+      id: task.id,
       repository: bs.getRepo()["meta_metadata_repository"],
     };
 
     res.header("Content-Type", "application/json");
     res.send(getResponse(req, response, format));
+
+    task.log("task completed successfully");
+    logger.info(task, "mmdrepository task succeeded");
   }
 
   return result;
@@ -99,25 +108,49 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     var name = req.query.name;
     var url = req.query.url || req.query.uri;
 
+    let task = new Task(req.baseUrl);
+    task.log("task initiated");
+
     if (name) {
+      task.log("mmd requested by name", name);
       bs.loadMmd(name, {}, mmdCallback);
     } else if (url) {
+      task.log("mmd requested by url", url);
       bs.selectMmd(url, {}, mmdCallback);
     } else {
-      next(new Error("'url' or 'name' parameter required."));
+      task.log("failure: no name or url specified");
+      logger.warn(task, "mmd task could not be completed");
+
+      return next(new Error("Either 'url' or 'name' parameter required."));
     }
 
     function mmdCallback(err, result) {
+      if(err) {
+        task.log("task failed");
+        logger.error(task, "mmd task failed");
+
+        return next(new Error("The requested Meta-Metadata could not be found."));
+      }
+
       var response = {
+        id: task.id,
         wrapper: result["meta_metadata"]
       };
 
       res.header("Content-Type", "application/json");
       res.send(getResponse(req, response, format));
+
+      task.log("task completed successfully");
+      logger.info(task, "meta-metadata request succeeded");
     }
   }
 
   return result;
+}
+
+// Necessary because express will not print message in production environment
+var errorHandler: express.ErrorRequestHandler = function(err, req, res, next) {
+  res.send(err.message);
 }
 
 /**
@@ -151,7 +184,9 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, re
         repositoryJsonp: repositoryFactory(bs, "jsonp"),
 
         wrapperJson: wrapperFactory(bs),
-        wrapperJsonp: wrapperFactory(bs, "jsonp")
+        wrapperJsonp: wrapperFactory(bs, "jsonp"),
+
+        errorHandler: errorHandler
       });
     }
   });

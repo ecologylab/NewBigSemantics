@@ -79,18 +79,6 @@ controlPage.open(masterUrl, function(status) {
   }, id, host, port, pactFile);
 });
 
-/*function filterLocation(url, callback) {
-  var id = url.substr(0, 20) + Date.now();
-  filterCallbacks[id] = callback;
-
-  controlPage.evaluate(function(url, id) {
-    window.socket.emit('filterLocation', {
-      id: id,
-      url: url
-    })
-  }, url, id);
-}*/
-
 function assertParams(msg) {
   for (var i = 1; i < arguments.length; ++i) {
     var name = arguments[i];
@@ -171,7 +159,7 @@ globalMethods.createPage = function(msg) {
         }
 
         if(redirect) {
-          var newUrl = page.proxy + url;
+          var newUrl = page.proxy + encodeURIComponent(url);
           console.log("changing url to " + newUrl);
           networkRequest.changeUrl(newUrl);
         }
@@ -218,14 +206,12 @@ pageMethods.setIgnoredSuffixes = function(page, msg) {
 }
 
 pageMethods.setProxy = function(page, msg) {
-  console.log("Setting proxy" + msg.params.proxyURL);
   page.proxy = msg.params.proxyURL;
 
   respond(msg.id);
 }
 
 pageMethods.setProxyBlacklist = function(page, msg) {
-  console.log("Setting proxy blacklist " + JSON.stringify(msg.params.patterns));
   page.proxyBlacklist = msg.params.patterns;
 
   respond(msg.id);
