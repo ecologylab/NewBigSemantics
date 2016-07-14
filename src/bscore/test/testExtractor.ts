@@ -1,3 +1,5 @@
+// Unit test for the PhantomJS-based extractor.
+
 import BSPhantom from '../bscore';
 import * as pm from '../../phantom/master';
 import * as path from 'path';
@@ -19,7 +21,7 @@ var bsjsFiles = [
   path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BigSemantics.js'),
 ];
 
-declare var extractMetadata: 
+declare var extractMetadata:
   (resp, mmd, bs, options, callback: (err: Error, metadata: any) => void) => void;
 declare var simpl: any;
 declare var bs: any;
@@ -43,43 +45,49 @@ function openPage(uri: string): pm.Page {
       console.log("Console: " + msg);
   });
 
-  page.onError((err, trace) => { 
+  page.onError((err, trace) => {
     console.log("Error: " + err)
   });
 
   return page.open(uri).injectJs(bsjsFiles);
 }
-                                                     
+
 function extract(uri: string, mmd: string, callback: MetadataResult) {
   var page = openPage(uri);
 
-  page.evaluateAsync(function(smmd) {
-    var mmd = simpl.deserialize(smmd);
+  page
+    .evaluateAsync(function(smmd) {
+      var mmd = simpl.deserialize(smmd);
+      if ('meta_metadata' in mmd
+        && mmd['meta_metadata']
+        && mmd['meta_metadata']['name']) {
+        mmd = mmd['meta_metadata'];
+      }
 
-    var resp = {
-      code: 200,
-      entity: document,
-      location: document.location.href
-    };
-  
-    extractMetadata(resp, mmd, null, null, function(err, metadata) {
-      respond(err, metadata);
-    });
-  }, mmd)
+      var resp = {
+        code: 200,
+        entity: document,
+        location: document.location.href
+      };
+
+      extractMetadata(resp, mmd, null, null, function(err, metadata) {
+        respond(err, metadata);
+      });
+    }, mmd)
     .then(result => { callback(null, result); })
     .catch(err => { callback(err, null); })
     .close();
 }
 
-function extractWithRepo(uri: string, mmd: string, mmdName: string, 
+function extractWithRepo(uri: string, mmd: string, mmdName: string,
                                           callback: MetadataResult) {
   var mmdRepo = fs.readFileSync(
-    path.resolve(__dirname, 
-      '../../../BigSemanticsJavaScript/bsjsCore/test/mmdrepository.json'
+    path.resolve(__dirname,
+      '../../../BigSemanticsJavaScript/bsjsCore/test/repo-all-160711.json'
     ),
     'utf8'
   );
-  
+
   var page = openPage(uri);
 
   page.evaluateAsync(function(smmd, mmdName, mmdRepo) {
@@ -120,7 +128,12 @@ function extractWithRepo(uri: string, mmd: string, mmdName: string,
 }
 
 describe("Without inheritance", () => {
-  var pageURL = "file://" + path.resolve(__dirname, "amazon.html");
+  var pageURL =
+    "file://"
+    + path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/amazon_product.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();
@@ -240,7 +253,12 @@ describe("Without inheritance", () => {
 });
 
 describe("With JS modifying page", function() {
-  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+  var pageURL =
+    "file://"
+    + path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/fake-page.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();
@@ -276,7 +294,12 @@ describe("With JS modifying page", function() {
 });
 
 describe("With xpath variable", function() {
-  var pageURL = "file://" + path.resolve(__dirname, "wikipedia.html");
+  var pageURL =
+    "file://" +
+    path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/wikipedia_article.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();
@@ -355,7 +378,12 @@ describe("With xpath variable", function() {
 });
 
 describe("With extract_as_html", function() {
-  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+  var pageURL =
+    "file://"
+    + path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/fake-page.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();
@@ -393,7 +421,12 @@ describe("With extract_as_html", function() {
 });
 
 describe("With extracted URL", function() {
-  var pageURL = "file://" + path.resolve(__dirname, "testpage.html");
+  var pageURL =
+    "file://"
+    + path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/fake-page.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();
@@ -431,7 +464,12 @@ describe("With extracted URL", function() {
 });
 
 describe("With inheritance", function() {
-  var pageURL = "file://" + path.resolve(__dirname, "amazon.html");
+  var pageURL =
+    "file://"
+    + path.resolve(
+      __dirname,
+      "../../../BigSemanticsJavaScript/bsjsCore/test/amazon_product.html"
+    );
 
   beforeEach(function() {
     master = new pm.Master();

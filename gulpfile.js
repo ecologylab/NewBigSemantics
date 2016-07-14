@@ -21,12 +21,14 @@ gulp.task('copy-files', function() {
   return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
 });
 
-gulp.task('test', function() {
-  gulp.src('build/bscore/test/ExtractorTest.js').pipe(jasmine());
+gulp.task('testExtractor', function() {
+  gulp.src('build/bscore/test/testExtractor.js').pipe(jasmine());
 });
 
 gulp.task('testHttpRespParser', function() {
   gulp.src('build/dpool/test/testHttpRespParser.js').pipe(jasmine());
 });
+
+gulp.task('test', [ 'testExtractor', 'testHttpRespParser' ]);
 
 gulp.task('default', ['tsc', 'copy-files']);

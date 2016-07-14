@@ -35,28 +35,34 @@ var proxyURL = "http://api.ecologylab.net:3000/proxy?url=";
 var proxyBlacklist = ['ecologylab.net'];
 
 export default class BSPhantom extends BigSemantics {
-  constructor(repoSource: any, options: any) {
-    var master = new pm.Master();
+  private options: any;
+  private master: pm.Master;
 
-    if (!options) {
-      options = {};
-    }
-    
+  constructor(repoSource: any, options: any) {
+    super(repoSource, options);
+    this.options = options || {};
+    this.master = this.options.master || new pm.Master();
+
     var mmdRepo = null;
-    options.extractor = (() => {
+    this.options.extractor = (() => {
       var extractor: IExtractor = (resp, mmd, bs, options, callback) => {
-        var agent = master.randomAgent();
+        var agent = this.master.randomAgent();
         var page = agent.createPage();
-        
+
         if(!mmdRepo)
           mmdRepo = simpl.serialize(bs.getRepo());
 
         page.setIgnoredSuffixes(ignoreSuffixes)
             .onConsole(msg => console.log("Console: " + msg))
-            .onError((err, trace) => console.log("Error: " + err))
-            //.setProxy(proxyURL)
-            .setProxyBlacklist(proxyBlacklist)
-            .open(resp.location)
+            .onError((err, trace) => console.log("Error: " + err));
+
+        if (this.options.proxyURL) {
+          page
+            .setProxy(this.options.proxyURL)
+            .setProxyBlacklist(proxyBlacklist);
+        }
+
+        page.open(resp.location)
             .injectJs(bsjsFiles)
             .evaluateAsync(function(mmdRepo) {
               // Quick fix because TypeScript changes to BigSemantics_1
@@ -70,13 +76,13 @@ export default class BSPhantom extends BigSemantics {
                     && mmd['meta_metadata']['name']) {
                     mmd = mmd['meta_metadata'];
                   }
-                  
+
                   var resp = {
                     code: 200,
                     entity: document,
                     location: document.location.href
                   };
-                  
+
                   var metadata = extractMetadataSync(resp, mmd as MetaMetadata, bs, null);
                   respond(null, metadata);
                 });
@@ -86,10 +92,10 @@ export default class BSPhantom extends BigSemantics {
             .close()
             .catch(err => callback(err, null));
       };
-      
+
       return extractor;
     })();
-    
+
     if (!options.downloader) {
       options.downloader = new BaseDownloader();
     }

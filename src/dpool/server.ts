@@ -15,9 +15,12 @@ middleware.create((err, mws) => {
   var app = express();
   app.get('/download', mws.validateParams, mws.download);
   app.get('/proxy', mws.validateParams, mws.proxy);
+  // FIXME remove the following routes -- they are merely for backward
+  // compatibility.
   app.get('/DownloaderPool/echo/get', mws.validateParams, mws.get);
   app.get('/DownloaderPool/page/download.json', mws.validateParams, mws.downloadJson);
   app.get('/DownloaderPool/page/download.xml', mws.validateParams, mws.downloadXml);
+  // FIXME make it possible to change the port.
   var server = app.listen(3000, () => {
     var host = server.address().address;
     var port = server.address().port;

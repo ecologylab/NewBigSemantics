@@ -21,11 +21,11 @@ interface Callback {
 export function createPhantomExtractor(master: pm.Master, host: string, options: Object, callback: Callback): void {
   var agent = master.randomAgent();
   var page = agent.createPage();
-  
+
   var phantomExtract: Extractor.IExtractor
     = function(resp, mmd, bigSemantics, options, mcallback) {
     var smmd: string = simpl.serialize(mmd);
-    
+
     page.open(host)
         .injectJs(bsjsFiles)
         .evaluate(() => {
@@ -35,19 +35,19 @@ export function createPhantomExtractor(master: pm.Master, host: string, options:
               && mmd['meta_metadata']['name']) {
             mmd = mmd['meta_metadata'];
           }
-          
+
           var resp = {
             code: 200,
             entity: document,
             location: document.location.href
           };
-          
+
           return extractMetadataSync(resp, mmd as BigSemantics.MetaMetadata, null, null);
         })
-      .then(result => mcallback(null, result))
-      .close()
-      .catch(err => mcallback(err, null));
+        .then(result => mcallback(null, result))
+        .close()
+        .catch(err => mcallback(err, null));
   }
-  
+
   callback(null, phantomExtract);
 }
