@@ -159,7 +159,6 @@ var downloadJsonFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
   return result;
 }
 
-// Deprecated. For backward compatibility only.
 var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
   var result: Middleware = function(req, resp, next) {
     dpool.newTask(req.dpool.task, (err, task) => {
