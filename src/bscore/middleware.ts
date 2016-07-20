@@ -2,6 +2,7 @@ import BSPhantom from './bscore';
 import logger from './logging';
 import { BaseDownloader } from './downloader';
 import { Task } from './task';
+import { logs } from '../bscore/logging';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 import * as express from 'express';
 
@@ -19,6 +20,9 @@ export interface MiddlewareSet {
   wrapperJson: Middleware;
   wrapperJsonp: Middleware;
 
+  tasksJson: Middleware;
+  taskJson: Middleware;
+
   errorHandler: express.ErrorRequestHandler;
 }
 
@@ -26,18 +30,28 @@ interface Response {
   id?: string;
   repository?: any;
   metadata?: any;
+  wrapper?: any;
   appId?: string;
   userId?: string;
   sessionId?: string;
   reqId?: string;
 }
 
-function getResponse(req: express.Request, resp: Response, format?: string): string {
+function copyParameters(req: express.Request, resp: Response, task: Task) {
   resp.appId = req.query.aid;
   resp.userId = req.query.uid;
   resp.sessionId = req.query.sid;
   resp.reqId = req.query.rid;
 
+  // include in task, for viewing in the dashboard
+  task.reqIp = req.ip;
+  task.appId = req.query.aid;
+  task.userId = req.query.uid;
+  task.sessionId = req.query.sid;
+  task.reqId = req.query.rid;
+}
+
+function getResponse(req: express.Request, resp: Response, format?: string): string {
   if (format == "jsonp") {
     var callback = req.query.callback || null;
 
@@ -51,23 +65,27 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
   var result: Middleware = function (req, res, next) {
     var url = req.query.url || req.query.uri;
 
-    if (url) {
-      let task = new Task(url);
+    let task = new Task(url || req.originalUrl);
+    task.log("task initiated");
 
-      task.log("task initiated");
+    var response: Response = {
+      id: task.id
+    };
+
+    copyParameters(req, response, task);
+
+    if (url) {
       bs.loadMetadata(url, {}, (err, result) => {
         if (err) {
-          task.log("task terminated", { err: err });
+          task.log("task terminated", err);
           logger.error(task, "metadata extraction task failed");
+          return next(new Error("An error occurred while processing your request."));
         }
 
         if (result.metadata) {
           task.log("task completed successfully");
 
-          var response: Response = {
-            id: task.id,
-            metadata: result.metadata
-          };
+          response.metadata = result.metadata    
 
           res.header("Content-Type", "application/json");
           res.send(getResponse(req, response, format));
@@ -76,7 +94,10 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
         }
       });
     } else {
-      next(new Error("Parameter 'url' is required."));
+      task.log("no url provided");
+      logger.warn(task, "metadata extraction task could not be completed - no url");
+
+      return next(new Error("Parameter 'url' is required."));
     }
   };
 
@@ -85,13 +106,15 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
 
 function repositoryFactory(bs: BSPhantom, format?: string): Middleware {
   var result: Middleware = function (req, res, next) {
-    let task = new Task(req.baseUrl);
+    let task = new Task(req.originalUrl);
     task.log("task initiated");
 
     var response = {
       id: task.id,
       repository: bs.getRepo()["meta_metadata_repository"],
     };
+
+    copyParameters(req, response, task);
 
     res.header("Content-Type", "application/json");
     res.send(getResponse(req, response, format));
@@ -108,8 +131,14 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     var name = req.query.name;
     var url = req.query.url || req.query.uri;
 
-    let task = new Task(req.baseUrl);
+    let task = new Task(req.originalUrl);
     task.log("task initiated");
+
+    var response: Response = {
+        id: task.id
+    };
+
+    copyParameters(req, response, task);
 
     if (name) {
       task.log("mmd requested by name", name);
@@ -119,7 +148,7 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
       bs.selectMmd(url, {}, mmdCallback);
     } else {
       task.log("failure: no name or url specified");
-      logger.warn(task, "mmd task could not be completed");
+      logger.warn(task, "meta-metadata task could not be completed - no parameters");
 
       return next(new Error("Either 'url' or 'name' parameter required."));
     }
@@ -127,15 +156,12 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     function mmdCallback(err, result) {
       if(err) {
         task.log("task failed");
-        logger.error(task, "mmd task failed");
+        logger.error(task, "meta-metadata task failed");
 
         return next(new Error("The requested Meta-Metadata could not be found."));
       }
 
-      var response = {
-        id: task.id,
-        wrapper: result["meta_metadata"]
-      };
+      response.wrapper = result["meta_metadata"];
 
       res.header("Content-Type", "application/json");
       res.send(getResponse(req, response, format));
@@ -144,6 +170,50 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
       logger.info(task, "meta-metadata request succeeded");
     }
   }
+
+  return result;
+}
+
+function taskListFactory(): Middleware {
+  var result: Middleware = function (req, res, next) {
+    var page = parseInt(req.query.page);
+    if (!page) page = 0;
+
+    var successes = 0;
+    var warnings = 0;
+    var failures = 0;
+
+    for (var task of logs.records) {
+      if (task.level == 40) {
+        warnings += 1;
+      } else if (task.level >= 50 && task.level <= 60) {
+        failures += 1;
+      } else {
+        successes += 1;
+      }
+    }
+
+    var response = {
+      logs: logs.records,
+      tasks: logs.records.length,
+      successes: successes,
+      warnings: warnings,
+      failures: failures
+    };
+
+    res.send(JSON.stringify(response));
+  };
+
+  return result;
+}
+
+function taskDetailFactory(): Middleware {
+  var result: Middleware = function (req, res, next) {
+    let id = req.query.id;
+
+    let task = logs.records.filter(log => log.id == id)[0];
+    res.send(JSON.stringify(task));
+  };
 
   return result;
 }
@@ -185,6 +255,9 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, re
 
         wrapperJson: wrapperFactory(bs),
         wrapperJsonp: wrapperFactory(bs, "jsonp"),
+
+        tasksJson: taskListFactory(),
+        taskJson: taskDetailFactory(),
 
         errorHandler: errorHandler
       });

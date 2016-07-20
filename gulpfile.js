@@ -17,6 +17,7 @@ gulp.task('copy-files', function() {
     "src/phantom/static/*",
     "src/phantom/*.js",
     "src/bscore/test/*.html",
+    "src/dashboard/**/*"
   ];
   return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
 });

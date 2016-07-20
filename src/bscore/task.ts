@@ -7,6 +7,15 @@ export interface Task {
 
   logs?: Array<Log>;
 
+  stack?: string;
+  
+  // for viewing in dashboard
+  reqIp?: string;
+  appId?: string;
+  userId?: string;
+  sessionId?: string;
+  reqId?: string;
+
   // possible states:
   // - ready: ready to be dispatched to a worker.
   // - dispatched: dispatched to a worker; ongoing.
@@ -26,6 +35,16 @@ export class Task {
   log(name: string, args?: any) {
     if(!this.logs) {
       this.logs = [];
+    }
+
+    if(args) {
+      if(args.stack) {
+        this.stack = args.stack;
+      } else if(args.err) {
+        if(args.err.stack) {
+          this.stack = args.err.stack;
+        }
+      }
     }
 
     this.logs.push({

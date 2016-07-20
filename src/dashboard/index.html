@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <title>BigSemantics Logs</title>
+  
+  <style type="text/css">
+    .ui.menu .item img.logo {
+      margin-right: 1.5em;
+    }
+    .main.container {
+      margin-top: 2em;
+    }
+    .tasks {
+      margin-top: 2em;
+    }
+    td > a {
+      cursor: pointer;
+      cursor: hand;
+    }
+  </style>
+
+  <script src="dist/jquery.min.js"></script>
+  <script src="dist/semantic.min.js"></script>
+  <script src="dist/handlebars.js"></script>
+  <script src="dist/time-elements.js"></script>
+
+  <script id="tasks-template" type="text/x-handlebars-template">
+    {{#each logs}}
+      <tr {{{showError level}}}>
+        <td><relative-time datetime="{{time}}">{{time}}</relative-time></td>
+        <td class="selectable">
+          {{#if id}}
+            <a onclick="showDetails('{{id}}')">{{id}}</a>
+          {{/if}}
+        </td>
+        <td>{{msg}}</td>
+      </tr>
+    {{/each}}
+  </script>
+
+  <script id="task-template" type="text/x-handlebars-template">
+    <div class="header">{{msg}}</div>
+    <div class="content">
+      <table class="ui celled striped table">
+        <tbody>
+          <tr>
+            <td><b>ID</b></td>
+            <td>{{id}}</td>
+          </tr>
+          <tr>
+            <td><b>URL</b></td>
+            <td>{{url}}</td>
+          </tr>
+          <tr>
+            <td><b>Hostname</b></td>
+            <td>{{hostname}}</td>
+          </tr>
+          <tr>
+            <td><b>PID</b></td>
+            <td>{{pid}}</td>
+          </tr>
+          <tr>
+            <td><b>Timestamp</b></td>
+            <td><local-time datetime="{{time}}">{{time}}</local-time></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="ui header">Task Logs</div>
+      <table class="ui celled striped table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Message</th>
+            <th>Arguments</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each logs}}
+            <tr>
+              <td><local-time datetime="{{datetime}}">{{datetime}}</local-time></td>
+              <td>{{name}}</td>
+              <td>{{#unless args.stack}}{{args}}{{/unless}}</td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <div class="ui header">Request Information</div>
+      <table class="ui celled striped table">
+        <tbody>
+          <tr>
+            <td><b>IP</b></td>
+            <td>{{reqIp}}</td>
+          </tr>
+          {{#if reqId}}
+          <tr>
+            <td><b>Request ID</b></td>
+            <td>{{reqId}}</td>
+          </tr>
+          {{/if}}
+          {{#if appId}}
+          <tr>
+            <td><b>Application ID</b></td>
+            <td>{{appId}}</td>
+          </tr>
+          {{/if}}
+          {{#if userId}}
+          <tr>
+            <td><b>User ID</b></td>
+            <td>{{userId}}</td>
+          </tr>
+          {{/if}}
+          {{#if sessionId}}
+          <tr>
+            <td><b>Session ID</b></td>
+            <td>{{sessionId}}</td>
+          </tr>
+          {{/if}}
+        </tbody>
+      </table>
+
+      {{#if stack}}
+        <div class="ui header">Stack Trace</div>
+        <div class="ui segment">
+          {{stack}}
+        </div>
+      {{/if}}
+
+      <div class="ui accordion">
+        <div class="title">
+          <i class="dropdown icon"></i>
+          View full JSON
+        </div>
+        <div class="content">
+          <div class="ui form">
+            <textarea rows="25">{{stringify this}}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </script>
+
+  <script id="pagination-template" type="text/x-handlebars-template">
+    {{#repeat pages}}
+    {{/each}}
+  </script>
+
+  <script type="text/javascript">
+    var tasksListTemplate = Handlebars.compile($("#tasks-template").html());
+    var taskInfoTemplate = Handlebars.compile($("#task-template").html()); 
+
+    function showDetails(id) {
+      $.get("../task.json?id=" + id, function(data) {
+        var task = JSON.parse(data);
+        
+        $("#taskInfo").html(taskInfoTemplate(task));
+
+        // prepare JSON accordion
+        $(document).ready(function() {
+          $(".ui.accordion").accordion({
+            // After accordion opens, modal needs to be refreshed
+            // otherwise scrolling may be impossible
+            // and 
+            onChange: function() {
+              $("#taskInfo").modal("refresh");
+            }
+          });
+        });
+
+        $("#taskInfo").modal('show');
+      });
+    }
+
+    $(document).ready(function() {
+      Handlebars.registerHelper("showError", function(level) {
+        if(level == 50 || level == 60) {
+          return "class = \"error\"";
+        } else if(level == 40) {
+          return "class = \"warning\"";
+        } else
+          return "class = \"positive\"";
+      });
+
+      /*Handlebars.registerHelper("repeat", function(times, options) {
+        var result = "";
+        for(let i = 0; i < parseInt(times); i++) {
+          result += options.fn(this);
+        }
+
+        return Handlebars.SafeString(result);
+      });*/
+
+      // Helper to pretty-print JSON in a template
+      Handlebars.registerHelper("stringify", function(arg) {
+        return JSON.stringify(arg, null, 2);
+      });
+      
+      function updateLogs() {
+        $.get("../tasks.json?page=0", function(data) {
+          var resp = JSON.parse(data);
+          // currently have to reverse logs because they are oldest to newest
+          resp.logs.reverse();
+          
+          $("#tasksList").html(tasksListTemplate(resp));
+
+          $("#numTasks").html(resp.tasks);
+          $("#numSuccesses").html(resp.successes);
+          $("#numWarnings").html(resp.warnings);
+          $("#numFailures").html(resp.failures);
+        });
+      }
+
+      updateLogs();
+      setInterval(updateLogs, 5000);
+    });
+  </script>
+
+  <link rel="stylesheet" type="text/css" class="ui" href="dist/semantic.min.css">
+</head>
+<body>
+  <div class="ui menu">
+    <div class="ui container">
+      <a href="#" class="header item">
+        BigSemantics Logs
+      </a>
+      <a href="#" class="item active">Tasks</a>
+      <a href="#" class="item">Agents</a>
+      <a href="#" class="item">Downloaders</a>
+      <div class="right menu">
+        <div class="item">
+          <div class="ui icon input">
+            <input type="text" placeholder="Search...">
+            <i class="search link icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui main text container">
+    <div class="ui four statistics">
+      <div class="statistic">
+        <div id="numTasks" class="value">
+          0
+        </div>
+        <div class="label">
+          Tasks
+        </div>
+      </div>
+      <div class="green statistic">
+        <div id="numSuccesses" class="value">
+          0
+        </div>
+        <div class="label">
+          Successes
+        </div>
+      </div>
+      <div class="yellow statistic">
+        <div id="numWarnings" class="value">
+          0
+        </div>
+        <div class="label">
+          Warnings
+        </div>
+      </div>
+      <div class="red statistic">
+        <div id="numFailures" class="value">
+          0
+        </div>
+        <div class="label">
+          Failures
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui container tasks">
+    <table class="ui celled selectable table">
+      <thead>
+        <tr>
+          <th class="three wide">Timestamp</th>
+          <th class="three wide">ID</th>
+          <th clas="ten wide">Message</th>
+        </tr>
+      </thead>
+      <tbody id="tasksList">
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3">
+            <div class="ui right floated pagination menu">
+              <a class="icon item">
+                <i class="left chevron icon"></i>
+              </a>
+              <a class="item active">1</a>
+              <a class="icon item">
+                <i class="right chevron icon"></i>
+              </a>
+            </div>
+          </th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div id="taskInfo" class="ui long modal">
+  </div>
+</body>
+</html>

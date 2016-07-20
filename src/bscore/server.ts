@@ -2,6 +2,7 @@
 
 import * as express from 'express';
 import * as bsservice from './middleware';
+import * as dashboard from '../dashboard/middleware';
 
 const PORT = process.env.BS_SERVICE_PORT || 8000;
 
@@ -26,10 +27,21 @@ bsservice.create((err, res) => {
   bsRouter.use("/mmdrepository.json", res.repositoryJson);
   bsRouter.use("/mmdrepository.jsonp", res.repositoryJsonp);
 
-  bsRouter.use(res.errorHandler); 
-  
-  app.use("/BigSemanticsService", bsRouter);
+  bsRouter.use("/tasks.json", res.tasksJson);
+  bsRouter.use("/task.json", res.taskJson);
+
+  bsRouter.use(res.errorHandler);
 });
 
+dashboard.create((err, res) => {
+  if(err) {
+    console.error(err);
+    return;
+  }
+ 
+  bsRouter.use("/dashboard", res.index);
+});
+
+app.use("/BigSemanticsService", bsRouter);
 app.listen(PORT);
 console.log("Service running on port " + PORT);
