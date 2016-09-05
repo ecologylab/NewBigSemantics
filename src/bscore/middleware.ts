@@ -3,6 +3,7 @@ import logger from './logging';
 import { BaseDownloader } from './downloader';
 import { Task } from './task';
 import { taskMon } from '../bscore/logging';
+import * as request from 'request';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 import * as express from 'express';
 import * as fs from 'fs';
@@ -25,6 +26,7 @@ export interface MiddlewareSet {
   taskJson: Middleware;
 
   agentsInfoJson: Middleware;
+  downloadersInfoJson: Middleware;
 
   errorHandler: express.ErrorRequestHandler;
 }
@@ -224,6 +226,24 @@ function agentsInfoFactory(bs: BSPhantom): Middleware {
   return result;
 }
 
+// Retrieves the downloader worker information from the dpool
+// necessary because can't access different port from web page
+function downloadersInfoFactory(): Middleware {
+  var result: Middleware = function(req, res, next) {
+    request("http://localhost:3000/workers.json", null, (err, resp, body) => {
+      if(!err && resp.statusCode == 200) {
+        res.contentType("application/json");
+        res.end(body);
+      } else {
+        res.status(500);
+        res.end(JSON.stringify(err));
+      }
+    });
+  };
+
+  return result;
+}
+
 // Necessary because express will not print message in production environment
 var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
   res.send(err.message);
@@ -266,6 +286,7 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, re
         taskJson: taskDetailFactory(),
 
         agentsInfoJson: agentsInfoFactory(bs),
+        downloadersInfoJson: downloadersInfoFactory(),
 
         errorHandler: errorHandler
       });

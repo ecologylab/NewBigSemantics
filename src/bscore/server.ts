@@ -31,6 +31,7 @@ bsservice.create((err, res) => {
   bsRouter.use("/task.json", res.taskJson);
   
   bsRouter.use("/agents.json", res.agentsInfoJson);
+  bsRouter.use("/downloaders.json", res.downloadersInfoJson);
 
   bsRouter.use(res.errorHandler);
 });

@@ -59,9 +59,7 @@ export class SOCKSConnection {
       // unexpected close
       if (!this.closing) {
         callback();
-      } else {
-        console.log("not unexpected!");
-      }
+      } 
     });
   }
 
@@ -73,6 +71,15 @@ export class SOCKSConnection {
       // Let's make sure process is dead, don't want the port to be taken
       this.proc.kill();
     }, 500);
+  }
+
+  toJSON() {
+    return {
+      host: this.host,
+      user: this.user,
+      port: this.port,
+      closing: this.closing
+    }
   }
 }
 
@@ -95,8 +102,6 @@ export function createConnection(host: string, user: string, port: number): Prom
     }, 15000);
 
     proc.stdout.on("data", (data: string) => {
-      // console.log("STDOUT: " + data);
-
       // Think this might be the only way we can confirm it opened successsfully
       if (data.indexOf("Last login") !== -1) {
         open = true;
@@ -116,13 +121,10 @@ export function createConnection(host: string, user: string, port: number): Prom
     });
 
     proc.on("error", (err) => {
-      reject("ERROR :( " + JSON.stringify(err));
       clearTimeout(timeout);
     });
 
     proc.on("close", (code, signal) => {
-      console.log(`<SOCKSConnection ${host}> closed`);
-
       if (!open) {
         reject("Connection rejected");
         clearTimeout(timeout);
@@ -130,8 +132,6 @@ export function createConnection(host: string, user: string, port: number): Prom
     });
 
     proc.on("exit", () => {
-      console.log(`<SOCKSConnection ${host}> exited`);
-
       proc.kill();
     });
   });

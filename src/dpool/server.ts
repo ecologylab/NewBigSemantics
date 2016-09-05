@@ -15,6 +15,7 @@ middleware.create((err, mws) => {
   var app = express();
   app.get('/download', mws.validateParams, mws.download);
   app.get('/proxy', mws.validateParams, mws.proxy);
+  app.get('/workers.json', mws.workers);
   // FIXME remove the following routes -- they are merely for backward
   // compatibility.
   app.get('/DownloaderPool/echo/get', mws.validateParams, mws.get);

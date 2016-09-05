@@ -35,6 +35,10 @@ export default class DownloaderPool {
     this.taskMan.newTask(task, callback);
   }
 
+  getWorkers() {
+    return this.workerMan.getWorkers();
+  }
+
   newWorker(worker: any): void {
     this.workerMan.newWorker(worker);
   }

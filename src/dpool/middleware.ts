@@ -26,6 +26,7 @@ export interface MiddlewareSet {
   validateParams: Middleware;
   download: Middleware;
   proxy: Middleware;
+  workers: Middleware;
   get: Middleware;          // deprecated
   downloadJson: Middleware; // deprecated
   downloadXml: Middleware;  // deprecated
@@ -241,12 +242,21 @@ var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
   return result;
 }
 
+var workersFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
+  var result: Middleware = function(req, resp, next) {
+    resp.end(JSON.stringify(dpool.getWorkers()));
+  };
+
+  return result;
+}
+
 export function create(callback: (err: Error, result: MiddlewareSet)=>void): void {
   DownloaderPool.create((err, dpool) => {
     var result: MiddlewareSet = {
       validateParams: validateParams,
       download: downloadFactory(dpool),
       proxy: proxyFactory(dpool),
+      workers: workersFactory(dpool),
       get: get,
       downloadJson: downloadJsonFactory(dpool),
       downloadXml: downloadXmlFactory(dpool),

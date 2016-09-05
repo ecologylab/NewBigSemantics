@@ -35,6 +35,10 @@ export default class WorkerMan {
     // logger.info({ path: this.workerScript, }, "worker script found");
     // logger.info({ path: this.heartbeatScript, }, "heartbeat script found");
   }
+  
+  getWorkers(): Worker[] {
+    return this.workers;    
+  }
 
   newWorker(worker: any): void {
     var w: Worker = {

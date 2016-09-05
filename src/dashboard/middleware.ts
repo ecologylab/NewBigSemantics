@@ -11,6 +11,6 @@ export interface MiddlewareSet {
 
 export function create(callback: (err: Error, result: MiddlewareSet) => void): void {
   callback(null, {
-    index: express.static(__dirname) 
+    index: express.static(path.join(__dirname, "../../static/dashboard")) 
   });
 }
