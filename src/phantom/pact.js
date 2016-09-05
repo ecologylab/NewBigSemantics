@@ -1,4 +1,5 @@
 // Bridge script running inside PhantomJS.
+"use strict";
 
 var system = require('system');
 var webpage = require('webpage');
@@ -55,7 +56,7 @@ controlPage.onCallback = function(msg) {
     // this is a page method; call with page and msg
     var page = pages[msg.params.pageId];
     if (page) {
-      var m = pageMethods[msg.method];
+      m = pageMethods[msg.method];
       m(page, msg);
     } else {
       respond(msg.id, "Page not found: " + msg.params.pageId, null);
@@ -64,7 +65,7 @@ controlPage.onCallback = function(msg) {
     // error: unknown method
     respond(msg.id, "Unknown method: " + msg.method, null);
   }
-}
+};
 // connect to master and send 'init' message to declare self
 controlPage.open(masterUrl, function(status) {
   console.log("Control page status: " + status);
@@ -133,13 +134,12 @@ globalMethods.createPage = function(msg) {
       if(page.ignoredSuffixes) {
         var ext = url.split('?')[0].split('.').pop();
         if(page.ignoredSuffixes.indexOf(ext) != -1) {
-          console.log("Ignoring request for " + url);
           networkRequest.abort();
           return;
         }
       }
 
-      if(page.proxy && url.indexOf("file://") === -1) {
+      if(page.proxy && url.indexOf("file://") === -1 && url.indexOf("data:") !== 0) {
         var redirect = true;
 
         if(page.proxyBlacklist) {
@@ -147,7 +147,7 @@ globalMethods.createPage = function(msg) {
             if(url.indexOf(page.proxyBlacklist[i]) !== -1) {
               redirect = false;
             }
-          }  
+          }
         } else if(page.proxyWhitelist) {
           redirect = false;
 
@@ -155,13 +155,24 @@ globalMethods.createPage = function(msg) {
             if(url.indexOf(page.proxyWhitelist[i]) !== -1) {
               redirect = true;
             }
-          }  
+          }
         }
 
         if(redirect) {
           var newUrl = page.proxy + encodeURIComponent(url);
-          console.log("changing url to " + newUrl);
           networkRequest.changeUrl(newUrl);
+        }
+      }
+    };
+
+    page.onResourceReceived = function(response) {
+      if (response.stage === "end") {
+        // annoyingly, headers are not stored in an associative array
+        for (var i = 0; i < response.headers.length; i++) {
+          var header = response.headers[i];
+          if (header.name === "X-Task-Info") {
+            sendMsg(pageId, "task", decodeURI(header.value));
+          }
         }
       }
     }

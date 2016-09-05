@@ -8,7 +8,6 @@ import * as events from 'events';
 import * as http from 'http';
 import * as express from 'express';
 import * as SocketIO from 'socket.io';
-import * as Promise from 'bluebird';
 import * as path from 'path';
 
 // Default port for Master's internal web / websocket server.
@@ -19,6 +18,16 @@ export interface MasterOptions {
   numberOfInitialAgents?: number;
   defaultAgentOptions?: AgentOptions;
   masterPort?: number;
+}
+
+interface AgentDetails {
+  pid: number,
+  id: string,
+  creationDate: Date,
+  pagesOpened: number,
+  tasks?: number,
+  successfulTasks?: number,
+  failedTasks?: number
 }
 
 // Master of multiple phantomjs processes and their agents.
@@ -71,6 +80,23 @@ export class Master extends events.EventEmitter {
     });
   }
 
+  public agentsInfo(): AgentDetails[]  {
+    var info: Array<AgentDetails> = [];
+
+    for(var agentID of Object.keys(this.agents)) {
+      var agent = this.agents[agentID];
+      
+      info.push({
+        pid: agent.getPid(),
+        id: agent.getId(),
+        creationDate: agent.getCreationDate(),
+        pagesOpened: agent.getPagesOpened()
+      });
+    }
+
+    return info;
+  }
+
   private newAgent(agentId: string,
                    promisedSocket?: Promise<SocketIO.Socket>,
                    agentOptions?: AgentOptions): Agent {
@@ -121,6 +147,7 @@ export interface AgentOptions {
 export class Agent extends events.EventEmitter {
 
   private id: string;
+  private creationDate: Date;
   private options: AgentOptions;
 
   private process: child_process.ChildProcess;
@@ -137,6 +164,7 @@ export class Agent extends events.EventEmitter {
 
     this.id = id;
     this.options = options || {};
+    this.creationDate = new Date();
 
     if (!this.options.noNewProcess) {
       var args = [
@@ -177,6 +205,11 @@ export class Agent extends events.EventEmitter {
         this.pages[msg.id].newErrorMessage(msg.text, msg.params.trace);
       });
 
+      s.on('task', msg => {
+        var task = JSON.parse(msg.text);
+        this.pages[msg.id].newTask(task);
+      });
+
       // TODO add more listeners on s, if any
       return s;
     });
@@ -184,6 +217,18 @@ export class Agent extends events.EventEmitter {
 
   getId(): string {
     return this.id;
+  }
+
+  getPid(): number {
+    return this.process.pid;
+  }
+
+  getPagesOpened(): number {
+    return this.pageId - 1;
+  }
+
+  getCreationDate(): Date {
+    return this.creationDate;
   }
 
   createPage(): Page {
@@ -218,6 +263,7 @@ export class Page extends events.EventEmitter {
 
   private consoleCallback: (msg: string) => void;
   private errorCallback: (err: string, trace: string) => void;
+  private taskCallback: (task: any) => void;
 
   // a promise for a future value which will be the result of most recent
   // operation on this webpage
@@ -273,14 +319,20 @@ export class Page extends events.EventEmitter {
   }
 
   newConsoleMessage(msg: string) {
-    if(this.consoleCallback) {
+    if (this.consoleCallback) {
       this.consoleCallback(msg);
     }
   }
 
   newErrorMessage(err: string, trace: string) {
-    if(this.errorCallback) {
+    if (this.errorCallback) {
       this.errorCallback(err, trace);
+    }
+  }
+
+  newTask(task: any) {
+    if (this.taskCallback) {
+      this.taskCallback(task);
     }
   }
 
@@ -292,6 +344,12 @@ export class Page extends events.EventEmitter {
 
   onError(callback: (msg: string, trace: string) => void): Page {
     this.errorCallback = callback;
+
+    return this;
+  }
+
+  onTask(callback: (task: any) => void): Page {
+    this.taskCallback = callback;
 
     return this;
   }

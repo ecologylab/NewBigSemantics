@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <title>BigSemantics Logs</title>
+  
+  <style type="text/css">
+    .ui.menu .item img.logo {
+      margin-right: 1.5em;
+    }
+    .main.container {
+      margin-top: 2em;
+    }
+    .tasks {
+      margin-top: 2em;
+    }
+    td > a {
+      cursor: pointer;
+      cursor: hand;
+    }
+  </style>
+
+  <script src="dist/jquery.min.js"></script>
+  <script src="dist/semantic.min.js"></script>
+  <script src="dist/handlebars.js"></script>
+  <script src="dist/time-elements.js"></script>
+
+  <script id="agents-template" type="text/x-handlebars-template">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>PID</th>
+        <th>Creation Date</th>
+        <th>Pages Opened</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each agents}}
+        <tr>
+          <td>{{id}}</td>
+          <td>{{pid}}</td>
+          <td><local-time datetime="{{creationDate}}" month="long" year="numeric" day="numeric" hour="numeric" minute="numeric" second="numeric">{{creationDate}}</local-time></td>
+          <td>{{pagesOpened}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </script>
+
+  <script type="text/javascript">
+    var agentsListTemplate = Handlebars.compile($("#agents-template").html());
+    //var taskInfoTemplate = Handlebars.compile($("#task-template").html()); 
+
+    $(document).ready(function() {
+      Handlebars.registerHelper("link", function(url) {
+        var shortened = url;
+
+        if(url.length > 80) {
+          shortened = shortened.substring(0, 80) + "...";
+        }
+
+        return new Handlebars.SafeString("<a href=\"" + url + "\">" + shortened + "</a>");
+      });
+
+      // Helper to pretty-print JSON in a template
+      Handlebars.registerHelper("stringify", function(arg) {
+        return JSON.stringify(arg, null, 2);
+      });
+      
+      function updateAgents() {
+        $.get("../agents.json", function(resp) {
+          // $("#tasksList").html(tasksListTemplate(resp));
+
+
+          $("#agentsList").html(agentsListTemplate(resp));
+          $("#numAgents").html(resp.agents.length);
+          // $("#numTasks").html(resp.numTasks);
+          // $("#numSuccesses").html(resp.successes);
+          // $("#numWarnings").html(resp.warnings);
+          // $("#numFailures").html(resp.failures);
+        });
+      }
+
+      updateAgents();
+      setInterval(updateAgents, 5000);
+    });
+  </script>
+
+  <link rel="stylesheet" type="text/css" class="ui" href="dist/semantic.min.css">
+</head>
+<body>
+  <div class="ui menu">
+    <div class="ui container">
+      <a href="#" class="header item">
+        BigSemantics Logs
+      </a>
+      <a href="./" class="item">Tasks</a>
+      <a href="agents.html" class="item active">Agents</a>
+      <a href="#" class="item">Downloaders</a>
+      <div class="right menu">
+        <div class="item">
+          <div class="ui icon input">
+            <input type="text" placeholder="Search...">
+            <i class="search link icon"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui main text container">
+    <div class="ui one statistics">
+      <div class="statistic">
+        <div id="numAgents" class="value">
+          0
+        </div>
+        <div class="label">
+          Agents
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ui container tasks">
+    <table id="agentsList" class="ui celled selectable table">
+      
+    </table>
+  </div>
+</body>
+</html>

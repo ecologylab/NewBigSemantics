@@ -2,6 +2,8 @@
 
 /// <reference path="../../typings/index.d.ts" />
 
+import { SOCKSConnection } from './socksConnection';
+
 export interface HttpHeader {
   name: string;
   value: string;
@@ -9,10 +11,10 @@ export interface HttpHeader {
 
 export interface HttpResponse {
   url: string;
-  otherUrls?: Array<string>;
+  otherUrls?: string[];
   code: number;
   message: string;
-  headers: Array<HttpHeader>;
+  headers: HttpHeader[];
   raw?: Buffer;
   content?: string;
 }
@@ -33,7 +35,7 @@ export interface Task {
 
   response?: HttpResponse;
 
-  logs?: Array<Log>;
+  logs?: Log[];
 
   // possible states:
   // - ready: ready to be dispatched to a worker.
@@ -44,7 +46,7 @@ export interface Task {
 
   attempts?: number;
 
-  callback?: (error: Error, task: Task)=>void;
+  callback?: (error: Error, task: Task) => void;
 }
 
 export interface Worker {
@@ -55,6 +57,20 @@ export interface Worker {
   user: string;
   identity: string;
 
+  socksPort: number;
+  connection?: SOCKSConnection
+
+  stats: {
+    successfulDownloads: number;
+    failedDownloads: number;
+    // time spent in milliseconds
+    downloadTime: number;
+    downloadBytes: number;
+
+    successfulConnections: number;
+    failedConnections: number;
+    connectionAttempts: number;
+  }
   // possible states:
   // - ready
   // - busy

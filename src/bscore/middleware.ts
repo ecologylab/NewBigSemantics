@@ -2,9 +2,10 @@ import BSPhantom from './bscore';
 import logger from './logging';
 import { BaseDownloader } from './downloader';
 import { Task } from './task';
-import { logs } from '../bscore/logging';
+import { taskMon } from '../bscore/logging';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 import * as express from 'express';
+import * as fs from 'fs';
 
 export interface Middleware {
   (req: express.Request, resp: express.Response, next: express.NextFunction): void;
@@ -22,6 +23,8 @@ export interface MiddlewareSet {
 
   tasksJson: Middleware;
   taskJson: Middleware;
+
+  agentsInfoJson: Middleware;
 
   errorHandler: express.ErrorRequestHandler;
 }
@@ -51,13 +54,15 @@ function copyParameters(req: express.Request, resp: Response, task: Task) {
   task.reqId = req.query.rid;
 }
 
-function getResponse(req: express.Request, resp: Response, format?: string): string {
-  if (format == "jsonp") {
+function sendResponse(req: express.Request, res: express.Response, data: Response, format?: string) {
+  if(format == "jsonp") {
     var callback = req.query.callback || null;
 
-    return callback + "(" + simpl.serialize(resp) + ");";
+    res.contentType("application/javascript");
+    res.send(callback + "(" + simpl.serialize(data) + ")");
   } else {
-    return simpl.serialize(resp);
+    res.contentType("application/json");
+    res.send(simpl.serialize(data));
   }
 }
 
@@ -75,20 +80,25 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
     copyParameters(req, response, task);
 
     if (url) {
-      bs.loadMetadata(url, {}, (err, result) => {
+      bs.loadMetadata(url, { task: task }, (err, result) => {
         if (err) {
           task.log("task terminated", err);
           logger.error(task, "metadata extraction task failed");
+
           return next(new Error("An error occurred while processing your request."));
+        }
+
+        if (result && result.metadata) {
+          task.dpoolTasks = result.metadata.dpoolTasks;
+          delete result.metadata.dpoolTasks;
         }
 
         if (result.metadata) {
           task.log("task completed successfully");
 
-          response.metadata = result.metadata    
+          response.metadata = result.metadata
 
-          res.header("Content-Type", "application/json");
-          res.send(getResponse(req, response, format));
+          sendResponse(req, res, response, format);
 
           logger.info(task, "metadata extraction task succeeded");
         }
@@ -116,8 +126,8 @@ function repositoryFactory(bs: BSPhantom, format?: string): Middleware {
 
     copyParameters(req, response, task);
 
-    res.header("Content-Type", "application/json");
-    res.send(getResponse(req, response, format));
+    res.contentType('application/json');
+    sendResponse(req, res, response, format);
 
     task.log("task completed successfully");
     logger.info(task, "mmdrepository task succeeded");
@@ -135,7 +145,7 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     task.log("task initiated");
 
     var response: Response = {
-        id: task.id
+      id: task.id
     };
 
     copyParameters(req, response, task);
@@ -154,7 +164,7 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     }
 
     function mmdCallback(err, result) {
-      if(err) {
+      if (err) {
         task.log("task failed");
         logger.error(task, "meta-metadata task failed");
 
@@ -163,8 +173,7 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
 
       response.wrapper = result["meta_metadata"];
 
-      res.header("Content-Type", "application/json");
-      res.send(getResponse(req, response, format));
+      sendResponse(req, res, response, format);
 
       task.log("task completed successfully");
       logger.info(task, "meta-metadata request succeeded");
@@ -179,29 +188,15 @@ function taskListFactory(): Middleware {
     var page = parseInt(req.query.page);
     if (!page) page = 0;
 
-    var successes = 0;
-    var warnings = 0;
-    var failures = 0;
-
-    for (var task of logs.records) {
-      if (task.level == 40) {
-        warnings += 1;
-      } else if (task.level >= 50 && task.level <= 60) {
-        failures += 1;
-      } else {
-        successes += 1;
-      }
-    }
-
     var response = {
-      logs: logs.records,
-      tasks: logs.records.length,
-      successes: successes,
-      warnings: warnings,
-      failures: failures
+      tasks: taskMon.getLast(50),
+      numTasks: taskMon.size,
+      successes: taskMon.stats.successes,
+      warnings: taskMon.stats.warnings,
+      failures: taskMon.stats.failures
     };
 
-    res.send(JSON.stringify(response));
+    res.send(response);
   };
 
   return result;
@@ -211,15 +206,26 @@ function taskDetailFactory(): Middleware {
   var result: Middleware = function (req, res, next) {
     let id = req.query.id;
 
-    let task = logs.records.filter(log => log.id == id)[0];
-    res.send(JSON.stringify(task));
+    let task = taskMon.filter(log => log.id == id)[0];
+    res.json(task);
+  };
+
+  return result;
+}
+
+function agentsInfoFactory(bs: BSPhantom): Middleware {
+  var result: Middleware = function (req, res, next) {
+    let id = req.query.id;
+
+    let agents = bs.getMaster().agentsInfo();
+    res.json({ agents: agents });
   };
 
   return result;
 }
 
 // Necessary because express will not print message in production environment
-var errorHandler: express.ErrorRequestHandler = function(err, req, res, next) {
+var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
   res.send(err.message);
 }
 
@@ -258,6 +264,8 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, re
 
         tasksJson: taskListFactory(),
         taskJson: taskDetailFactory(),
+
+        agentsInfoJson: agentsInfoFactory(bs),
 
         errorHandler: errorHandler
       });

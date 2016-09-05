@@ -7,7 +7,7 @@ import { Log, Task } from './types';
 
 export function taskLog(task: Task, name: string, args?: any) {
   if (!task.logs) {
-    task.logs = new Array<Log>();
+    task.logs = [];
   }
   task.logs.push({
     datetime: new Date(),
@@ -17,6 +17,8 @@ export function taskLog(task: Task, name: string, args?: any) {
 }
 
 export function nicePResult(pResult: any): any {
+  if(pResult == null) return;
+
   var result: any = {};
   if (pResult.code) {
     result.code = pResult.code;
@@ -42,8 +44,12 @@ export var logger = bunyan.createLogger({
     },
     {
       level: 'info',
-      stream: process.stderr,
+      stream: process.stdout,
     },
+    {
+      level: 'error',
+      stream: process.stderr
+    }
   ],
   serializers: bunyan.stdSerializers,
 });

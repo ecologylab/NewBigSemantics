@@ -1,8 +1,5 @@
 // The facade of downloader pool, as a library.
 
-/// <reference path="../../typings/index.d.ts" />
-
-import * as fs from 'fs';
 import * as os from 'os';
 import * as request from 'request';
 import Dispatcher from './dispatcher';
@@ -53,7 +50,7 @@ export default class DownloaderPool {
     if (config instanceof Error) {
       logger.warn({ err: config as Error, }, "error loading config");
     } else {
-      // add workers
+      // add workers  
       if (config.workerGroups) {
         config.workerGroups.forEach(group => {
           group.hosts.forEach(host => {

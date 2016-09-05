@@ -9,11 +9,11 @@ export default
 function parseHttpResp(url: string,
                        raw: Buffer,
                        callback: (err: Error, resp: HttpResponse)=>void): void {
-  var otherUrls = new Array<string>();
+  var otherUrls: string[] = [];
 
   var code: number;
   var message: string;
-  var hdrs: Array<HttpHeader>;
+  var hdrs: HttpHeader[];
 
   var p = 0;
   while (true) {
@@ -35,7 +35,7 @@ function parseHttpResp(url: string,
     message = m1[2];
 
     // other headers
-    hdrs = new Array<HttpHeader>();
+    hdrs = [];
     for (var i = 1; i < lines.length; ++i) {
       var m2 = lines[i].match(/^([^:]+):\s*(.+)/);
       if (!m2) {

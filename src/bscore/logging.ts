@@ -1,6 +1,7 @@
 import * as bunyan from 'bunyan';
 import Task from './task';
 import Log from '../utils/log';
+import TaskMonitor from '../utils/taskMonitor';
 
 // Errors are not JSON serializable by default
 // So create a toJSON prototype for Error 
@@ -22,14 +23,14 @@ if (!('toJSON' in Error.prototype)) {
   });
 }
 
-export var logs = new bunyan.RingBuffer({ limit: 10000 });
+export var taskMon = new TaskMonitor(10000);
 export var logger = bunyan.createLogger({
   name: "NewBigSemantics",
   streams: [{
-      stream: process.stdout
+      stream: process.stderr
     }, {
       type: 'raw',
-      stream: logs
+      stream: taskMon
     },
     {
       type: 'rotating-file',

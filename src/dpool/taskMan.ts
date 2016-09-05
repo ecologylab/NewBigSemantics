@@ -1,7 +1,5 @@
 // Task manager.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as LRU from 'lru-cache';
 import { Task, Log } from './types';
 import { base32enc, sha256 } from '../utils/codec';
@@ -20,13 +18,13 @@ export default class TaskMan {
 
   private done: LRU.Cache<Task>;
 
-  private tasks: Array<Task>;
+  private tasks: Task[];
 
   constructor() {
     this.done = LRU<Task>({
       max: TaskMan.defaultCacheSize,
     });
-    this.tasks = new Array<Task>();
+    this.tasks = [];
   }
 
   newTask(task: any, callback: (error: Error, result: any)=>void): void {
@@ -62,7 +60,7 @@ export default class TaskMan {
   //
   // returns true if such a task was found and dispatched.
   findAndDispatch(callback: (task: Task)=>boolean): boolean {
-    var buf = new Array<Task>();
+    var buf = [];
 
     var found = false;
 

@@ -6,6 +6,7 @@
 import * as express from 'express';
 import * as xml from 'xml';
 import DownloaderPool from './dpool';
+import * as fs from 'fs';
 
 interface Request extends express.Request {
   dpool: {
@@ -83,7 +84,7 @@ var proxyFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
       } else {
         resp.status(500);
         resp.send(task);
-        resp.end();
+        return resp.end();
       }
     });
   };

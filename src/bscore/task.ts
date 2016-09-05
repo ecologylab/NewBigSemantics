@@ -1,11 +1,12 @@
 import Log from '../utils/log';
 import { base32enc, sha256 } from '../utils/codec';
+import * as dpool from '../dpool/types';
 
 export interface Task {
   id: string;
   url: string;
 
-  logs?: Array<Log>;
+  logs?: Log[];
 
   stack?: string;
   
@@ -15,6 +16,8 @@ export interface Task {
   userId?: string;
   sessionId?: string;
   reqId?: string;
+
+  dpoolTasks?: dpool.Task[];
 
   // possible states:
   // - ready: ready to be dispatched to a worker.

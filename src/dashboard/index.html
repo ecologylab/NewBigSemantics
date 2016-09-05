@@ -29,7 +29,7 @@
   <script src="dist/time-elements.js"></script>
 
   <script id="tasks-template" type="text/x-handlebars-template">
-    {{#each logs}}
+    {{#each tasks}}
       <tr {{{showError level}}}>
         <td><relative-time datetime="{{time}}">{{time}}</relative-time></td>
         <td class="selectable">
@@ -124,6 +124,59 @@
         </tbody>
       </table>
 
+      {{#if dpoolTasks}}
+        <div class="ui accordion">
+          <div class="title">
+            <i class="dropdown icon"></i>
+            View Download Pool Tasks
+          </div>
+          <div class="content">
+            {{#each dpoolTasks}}
+            <table class="ui celled striped table">
+              <thead>
+                <tr>
+                  <th colspan="2">{{id}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><b>URL</b></td>
+                  <td>{{link url}}</td>
+                </tr>
+                <tr>
+                  <td><b>Response Code</b></td>
+                  <td>{{response.code}}</td>
+                </tr>
+                <tr>
+                  <td><b>Response Message</b></td>
+                  <td>{{response.message}}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table class="ui celled striped table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Message</th>
+                  <th>Arguments</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each logs}}
+                  <tr>
+                    <td><local-time datetime="{{datetime}}">{{datetime}}</local-time></td>
+                    <td>{{name}}</td>
+                    <td>{{#unless args.stack}}{{args}}{{/unless}}</td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+            {{/each}}
+          </div>
+        </div>
+      {{/if}}
+
       {{#if stack}}
         <div class="ui header">Stack Trace</div>
         <div class="ui segment">
@@ -134,7 +187,7 @@
       <div class="ui accordion">
         <div class="title">
           <i class="dropdown icon"></i>
-          View full JSON
+          View JSON
         </div>
         <div class="content">
           <div class="ui form">
@@ -155,8 +208,8 @@
     var taskInfoTemplate = Handlebars.compile($("#task-template").html()); 
 
     function showDetails(id) {
-      $.get("../task.json?id=" + id, function(data) {
-        var task = JSON.parse(data);
+      $.get("../task.json?id=" + id, function(task) {
+        //var task = JSON.parse(data);
         
         $("#taskInfo").html(taskInfoTemplate(task));
 
@@ -186,14 +239,15 @@
           return "class = \"positive\"";
       });
 
-      /*Handlebars.registerHelper("repeat", function(times, options) {
-        var result = "";
-        for(let i = 0; i < parseInt(times); i++) {
-          result += options.fn(this);
+      Handlebars.registerHelper("link", function(url) {
+        var shortened = url;
+
+        if(url.length > 80) {
+          shortened = shortened.substring(0, 80) + "...";
         }
 
-        return Handlebars.SafeString(result);
-      });*/
+        return new Handlebars.SafeString("<a href=\"" + url + "\">" + shortened + "</a>");
+      });
 
       // Helper to pretty-print JSON in a template
       Handlebars.registerHelper("stringify", function(arg) {
@@ -201,14 +255,14 @@
       });
       
       function updateLogs() {
-        $.get("../tasks.json?page=0", function(data) {
-          var resp = JSON.parse(data);
-          // currently have to reverse logs because they are oldest to newest
-          resp.logs.reverse();
+        $.get("../tasks.json?page=0", function(resp) {
+          //var resp = JSON.parse(data);
+          // currently have to reverse tasks because they are oldest to newest
+          resp.tasks.reverse();
           
           $("#tasksList").html(tasksListTemplate(resp));
 
-          $("#numTasks").html(resp.tasks);
+          $("#numTasks").html(resp.numTasks);
           $("#numSuccesses").html(resp.successes);
           $("#numWarnings").html(resp.warnings);
           $("#numFailures").html(resp.failures);
@@ -228,8 +282,8 @@
       <a href="#" class="header item">
         BigSemantics Logs
       </a>
-      <a href="#" class="item active">Tasks</a>
-      <a href="#" class="item">Agents</a>
+      <a href="./" class="item active">Tasks</a>
+      <a href="agents.html" class="item">Agents</a>
       <a href="#" class="item">Downloaders</a>
       <div class="right menu">
         <div class="item">
@@ -285,7 +339,7 @@
         <tr>
           <th class="three wide">Timestamp</th>
           <th class="three wide">ID</th>
-          <th clas="ten wide">Message</th>
+          <th class="ten wide">Message</th>
         </tr>
       </thead>
       <tbody id="tasksList">

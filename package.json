@@ -7,12 +7,13 @@
     "bluebird": "^3.4.0",
     "bunyan": "^1.8.1",
     "express": "^4.13.4",
+    "jasmine": "^2.4.1",
     "koa": "^1.2.0",
     "lru-cache": "^4.0.1",
     "request": "^2.72.0",
     "socket.io": "^1.4.6",
-    "xml": "^1.0.1",
-    "jasmine": "^2.4.1"
+    // "socks-proxy-agent": "^2.0.0",
+    "xml": "^1.0.1"
   },
   "devDependencies": {
     "gulp": "^3.9.1",
