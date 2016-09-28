@@ -13,6 +13,6 @@
 
     "BigSemanticsJavaScript",
 
-    "src/old-phantom"
+    "src/core"
   ]
 }

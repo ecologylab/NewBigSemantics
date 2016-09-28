@@ -1,0 +1,8 @@
+{
+  port: 8000,
+  secure_port: 9443,
+
+  use_https: false,
+  // passphrase: '<your passphrase if any>',
+  // pfx_path: '<path to your PFX file>',
+}
