@@ -10,8 +10,12 @@ import * as express from 'express';
 import * as SocketIO from 'socket.io';
 import * as path from 'path';
 
+import * as config from '../utils/config';
+
+var conf: any = config.get('service');
+
 // Default port for Master's internal web / websocket server.
-export const webPort = 10080;
+export const webPort = conf.phantom_master_port;
 
 // Options for a Master.
 export interface MasterOptions {
@@ -85,7 +89,7 @@ export class Master extends events.EventEmitter {
 
     for(var agentID of Object.keys(this.agents)) {
       var agent = this.agents[agentID];
-      
+
       info.push({
         pid: agent.getPid(),
         id: agent.getId(),

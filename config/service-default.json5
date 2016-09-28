@@ -1,6 +1,7 @@
 {
-  port: 8000,
+  port: 9000,
   secure_port: 9443,
+  phantom_master_port: 9088,
 
   use_https: false,
   // passphrase: '<your passphrase if any>',
