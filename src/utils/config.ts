@@ -86,7 +86,11 @@ function mergeInto(dest: Object, src: Object): void {
   }
 }
 
+var cached = {};
+
 export function get(componentName: string): Object | Error {
+  if (componentName in cached) return cached[componentName];
+
   var defaultConfigFileName = componentName + '-default.json5';
   var configFileName = componentName + '.json5';
 
@@ -113,5 +117,6 @@ export function get(componentName: string): Object | Error {
     dir = result.dir;
   }
 
+  cached[componentName] = config;
   return config;
 }

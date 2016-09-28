@@ -4,7 +4,11 @@
 /// <reference path="./xml.d.ts" />
 
 import * as express from 'express';
+
+import * as config from '../utils/config';
 import * as middleware from './middleware';
+
+var conf: any = config.get('dpool');
 
 middleware.create((err, mws) => {
   if (err) {
@@ -22,7 +26,7 @@ middleware.create((err, mws) => {
   app.get('/DownloaderPool/page/download.json', mws.validateParams, mws.downloadJson);
   app.get('/DownloaderPool/page/download.xml', mws.validateParams, mws.downloadXml);
   // FIXME make it possible to change the port.
-  var server = app.listen(3000, () => {
+  var server = app.listen(conf.port, () => {
     var host = server.address().address;
     var port = server.address().port;
     console.log("Web server listening at http://%s:%s", host, port);
