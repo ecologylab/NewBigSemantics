@@ -43,6 +43,7 @@ dashboard.create((err, res) => {
   }
  
   bsRouter.use("/dashboard", res.index);
+  bsRouter.use("/dashboard/public", res.generated);
 });
 
 app.use("/BigSemanticsService", bsRouter);

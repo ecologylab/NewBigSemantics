@@ -27,95 +27,12 @@
     }
   </style>
 
+  <script src="dist/react.min.js"></script>
+  <script src="dist/react-dom.min.js"></script>
   <script src="dist/jquery.min.js"></script>
   <script src="dist/semantic.min.js"></script>
-  <script src="dist/handlebars.js"></script>
-  <script src="dist/time-elements.js"></script>
-
-  <script id="downloaders-template" type="text/x-handlebars-template">
-    <thead>
-      <tr>
-        <th>Host</th>
-        <th>Local Port</th>
-        <th>Avg. Download Rate</th>
-        <th>State</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each this}}
-        <tr {{{showError this}}}>
-          <td>{{id}}</td>
-          <td>{{socksPort}}</td>
-          <td>{{{formatSpeed stats.speed}}}</td>
-          <td>{{state}}</td>
-        </tr>
-      {{/each}}
-    </tbody>
-  </script>
-
-  <script type="text/javascript">
-    var downloadersTemplate = Handlebars.compile($("#downloaders-template").html());
-
-    $(document).ready(function() {
-      Handlebars.registerHelper("showError", function(worker) {
-        if(worker.state != 'ready' && worker.state != 'busy') {
-          return "class = \"error\"";
-        } else {
-          return "class = \"positive\"";
-        }
-      });
-
-      Handlebars.registerHelper("formatSpeed", function(num) {
-        if(isNaN(num))
-          return "N/A";
-
-        return num.toFixed(3).toString() + " Mb/s";
-      });
-
-      Handlebars.registerHelper("link", function(url) {
-        var shortened = url;
-
-        if(url.length > 80) {
-          shortened = shortened.substring(0, 80) + "...";
-        }
-
-        return new Handlebars.SafeString("<a href=\"" + url + "\">" + shortened + "</a>");
-      });
-
-      // Helper to pretty-print JSON in a template
-      Handlebars.registerHelper("stringify", function(arg) {
-        return JSON.stringify(arg, null, 2);
-      });
-      
-      function updateDownloaders() {
-        $.get("../downloaders.json", function(resp) {
-          let ready = 0;
-          let unresponsive = 0;
-
-          for(let worker of resp) {
-            let seconds = worker.stats.downloadTime / 1000;
-            let megabits = worker.stats.downloadBytes / 1024 / 128;
-
-            worker.stats.speed = megabits / seconds;
-
-            if(worker.state == "ready" || worker.state == "busy") {
-              ready += 1;
-            } else {
-              unresponsive += 1;
-            }
-          }
-
-          $("#downloadersList").html(downloadersTemplate(resp));
-          $("#numDownloaders").html(resp.length);
-          $("#readyDownloaders").html(ready);
-          $("#unresponsiveDownloaders").html(unresponsive);
-        });
-      }
-
-      updateDownloaders();
-      setInterval(updateDownloaders, 5000);
-    });
-  </script>
+  <script src="public/misc.js"></script>
+  <script src="public/downloaders.js"></script>
 
   <link rel="stylesheet" type="text/css" class="ui" href="dist/semantic.min.css">
 </head>
@@ -147,7 +64,7 @@
           0
         </div>
         <div class="label">
-          Agents
+          Downloaders
         </div>
       </div>
 
@@ -171,10 +88,7 @@
     </div>
   </div>
 
-  <div class="ui container tasks">
-    <table id="downloadersList" class="ui celled selectable table">
-    </table>
-  </div>
+  <div id="downloadersList" class="ui container tasks"></div>
 </body>
 
 </html>

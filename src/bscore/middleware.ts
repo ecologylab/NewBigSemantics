@@ -254,14 +254,14 @@ var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
  * @param {(err: Error, result: MiddlewareSet) => void} callback
  * @param {any} repoSource - The location from which to obtain the mmd repository 
  */
-export function create(callback: (err: Error, result: MiddlewareSet) => void, repoSource?: any): void {
-  repoSource = repoSource || {
+export function create(callback: (err: Error, result: MiddlewareSet) => void, options?: any): void {
+  options = options || {};
+  
+  var repoSource = options.repoSource || {
     url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'
   };
 
-  var options = {
-    downloader: new BaseDownloader()
-  };
+  options.downloader = new BaseDownloader();
 
   var bs = new BSPhantom(repoSource, options);
 

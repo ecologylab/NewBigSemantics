@@ -14,7 +14,6 @@ import { Task } from './task';
 import * as pm from '../phantom/master';
 import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 
-
 // Files to inject for extraction
 var bsjsFiles = [
   '../../BigSemanticsJavaScript/bsjsCore/BSUtils.js',
@@ -73,10 +72,8 @@ export default class BSPhantom extends BigSemantics {
           page
             .setProxy(this.options.proxyURL)
             .setProxyBlacklist(this.options.proxyBlacklist);
-            //.setProxyBlacklist(proxyBlacklist);
         }
 
-        page.setProxy(proxyURL);
         page.open(resp.location)
             .injectJs(bsjsFiles)
             .evaluateAsync(function(mmdRepo) {

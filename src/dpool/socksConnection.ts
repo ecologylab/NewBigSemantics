@@ -88,7 +88,7 @@ export function createConnection(host: string, user: string, port: number): Prom
     let open = false;
     // -tt forces pseudo-terminal allocation
     // necessary because we can't read ssh terminal output otherwise 
-    let args = ["-D", String(port), user + "@" + host, "-tt"];
+    let args = ["-D", String(port), "-o", "StrictHostKeyChecking=no", user + "@" + host, "-tt"];
     let proc = cp.spawn("ssh", args);
 
     console.log("Running `ssh " + args.join(' ') + '`');

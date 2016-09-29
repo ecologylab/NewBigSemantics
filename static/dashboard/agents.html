@@ -23,70 +23,12 @@
     }
   </style>
 
+  <script src="dist/react.min.js"></script>
+  <script src="dist/react-dom.min.js"></script>
   <script src="dist/jquery.min.js"></script>
   <script src="dist/semantic.min.js"></script>
-  <script src="dist/handlebars.js"></script>
-  <script src="dist/time-elements.js"></script>
-
-  <script id="agents-template" type="text/x-handlebars-template">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>PID</th>
-        <th>Creation Date</th>
-        <th>Pages Opened</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#each agents}}
-        <tr>
-          <td>{{id}}</td>
-          <td>{{pid}}</td>
-          <td><local-time datetime="{{creationDate}}" month="long" year="numeric" day="numeric" hour="numeric" minute="numeric" second="numeric">{{creationDate}}</local-time></td>
-          <td>{{pagesOpened}}</td>
-        </tr>
-      {{/each}}
-    </tbody>
-  </script>
-
-  <script type="text/javascript">
-    var agentsListTemplate = Handlebars.compile($("#agents-template").html());
-    //var taskInfoTemplate = Handlebars.compile($("#task-template").html()); 
-
-    $(document).ready(function() {
-      Handlebars.registerHelper("link", function(url) {
-        var shortened = url;
-
-        if(url.length > 80) {
-          shortened = shortened.substring(0, 80) + "...";
-        }
-
-        return new Handlebars.SafeString("<a href=\"" + url + "\">" + shortened + "</a>");
-      });
-
-      // Helper to pretty-print JSON in a template
-      Handlebars.registerHelper("stringify", function(arg) {
-        return JSON.stringify(arg, null, 2);
-      });
-      
-      function updateAgents() {
-        $.get("../agents.json", function(resp) {
-          // $("#tasksList").html(tasksListTemplate(resp));
-
-
-          $("#agentsList").html(agentsListTemplate(resp));
-          $("#numAgents").html(resp.agents.length);
-          // $("#numTasks").html(resp.numTasks);
-          // $("#numSuccesses").html(resp.successes);
-          // $("#numWarnings").html(resp.warnings);
-          // $("#numFailures").html(resp.failures);
-        });
-      }
-
-      updateAgents();
-      setInterval(updateAgents, 5000);
-    });
-  </script>
+  <script src="public/misc.js"></script>
+  <script src="public/agents.js"></script>
 
   <link rel="stylesheet" type="text/css" class="ui" href="dist/semantic.min.css">
 </head>
@@ -123,10 +65,6 @@
     </div>
   </div>
 
-  <div class="ui container tasks">
-    <table id="agentsList" class="ui celled selectable table">
-      
-    </table>
-  </div>
+  <div id="agentsList" class="ui container tasks"></div>
 </body>
 </html>
