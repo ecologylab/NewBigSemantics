@@ -1,43 +1,122 @@
-// Simple configuration related utilities.
+// Simple configuration management tool.
+//
+// This tool assumes the following simple directory layout for both development
+// and deployment:
+//
+//   /instance
+//     /script
+//     /log
+//     /config
+//       component1.json
+//       component2.json
+//     /project
+//       /src
+//       /config
+//         component1-default.json
+//         component2-default.json
+//         component3-default.json
+//       /build
+//       /static
+//
+// Where instance is a folder containing everything about this particular
+// running instance, and project is the source controlled repository for that
+// project.
+//
+// With this layout, configurations are simply divided into two categories:
+//   - Default configurations
+//     - Required
+//     - Each component can only have 1 default configuration file
+//     - File name format: <component_name>-default.<format>
+//   - Instance-specific configurations
+//     - Optional
+//     - Each component can have multiple configuration files
+//     - File name format: <component_name>.<format>
+//
+// This simple tool helps you find default and instance-specific configurations,
+// and merge them into one single configuration object for convenient use in
+// code.
+//
+// Usage:
+//
+// import * as config from 'config';
+// var conf = config.get('my-component');
+// console.log("merged configuration, as an object: ", conf);
 
 /// <reference path="../../typings/index.d.ts" />
-
-import { parseJson } from './json';
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as JSON5 from 'json5';
 
-export function searchConfig(filename: string): string|Error {
-  var dir = __dirname;
+function search(initDir: string, fileName: string): { file: string, dir: string } {
+  var dir = path.resolve(initDir);
 
   while (dir != '/') {
-    var fp = path.join(dir, filename);
-    if (fs.existsSync(fp)) {
-      return fp;
+    var configDir = path.join(dir, 'config');
+    var configFile = path.join(configDir, fileName);
+    if (fs.existsSync(configFile)) {
+      return {
+        file: configFile,
+        dir: dir,
+      };
     }
     dir = path.dirname(dir);
   }
 
-  var hfilepath = path.join(os.homedir(), filename);
-  if (fs.existsSync(hfilepath)) {
-    return hfilepath;
-  }
-
-  return new Error("Failed to find " + filename);
+  return null;
 }
 
-export function loadConfig(filename: string): any {
-  var filepath = searchConfig(filename);
-  if (filepath instanceof Error) {
-    return filepath;
+function mergeInto(dest: Object, src: Object): void {
+  if (dest && src) {
+    for (var key in src) {
+      var vsrc = src[key];
+      var vdest = dest[key];
+      if (vsrc) {
+        if (vdest) {
+          if (typeof vdest === 'object' && !(vdest instanceof Array)
+              && typeof vsrc === 'object' && !(vsrc instanceof Array)) {
+            mergeInto(vdest, vsrc);
+            continue;
+          }
+        }
+        dest[key] = vsrc;
+      }
+    }
+  }
+}
+
+var cached = {};
+
+export function get(componentName: string): Object | Error {
+  if (componentName in cached) return cached[componentName];
+
+  var defaultConfigFileName = componentName + '-default.json5';
+  var configFileName = componentName + '.json5';
+
+  var config = {};
+
+  var result = search(__dirname, defaultConfigFileName);
+  if (result instanceof Error) return result;
+  if (result == null) return new Error("Configuration not found for " + componentName);
+  var file = result.file;
+  var dir = result.dir;
+
+  while (true) {
+    var obj = {};
+    try {
+      obj = JSON5.parse(fs.readFileSync(file).toString());
+    } catch (err) {
+      return new Error("Failed to parse " + file);
+    }
+    mergeInto(config, obj);
+
+    result = search(path.dirname(dir), componentName + '.json5');
+    if (result === null) break;
+    file = result.file;
+    dir = result.dir;
   }
 
-  try {
-    var s = fs.readFileSync(filepath as string, 'utf8');
-    var config = parseJson(s);
-    return config;
-  } catch (exception) {
-    return new Error("Failed to load config, exception: " + exception);
-  }
+  cached[componentName] = config;
+  return config;
 }

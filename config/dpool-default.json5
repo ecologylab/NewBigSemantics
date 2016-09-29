@@ -1,0 +1,18 @@
+{
+  port: 3100,
+  mmdRepoUrl: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json',
+  // workerGroups: [
+  //   {
+  //     group: '<group name>',
+  //     port: <ssh port number>,
+  //     user: '<user name>',
+  //     identity: '<identity file path',
+  //     hosts: [
+  //       '<host-1>',
+  //       '<host-2>',
+  //       ...,
+  //       '<host-n>',
+  //     ],
+  //   },
+  // ],
+}

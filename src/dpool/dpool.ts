@@ -2,12 +2,13 @@
 
 import * as os from 'os';
 import * as request from 'request';
+
+import * as config from '../utils/config';
+
 import Dispatcher from './dispatcher';
 import Matcher from './matcher';
 import TaskMan from './taskMan';
 import WorkerMan from './workerMan';
-import { parseJson } from '../utils/json';
-import { loadConfig } from '../utils/config';
 import { Task } from './types';
 import logger from './logging';
 
@@ -50,13 +51,15 @@ export default class DownloaderPool {
     dpool.matcher = new Matcher();
     dpool.dispatcher = new Dispatcher(dpool.taskMan, dpool.workerMan, dpool.matcher);
 
-    var config = loadConfig('dpool-config.json');
-    if (config instanceof Error) {
-      logger.warn({ err: config as Error, }, "error loading config");
+    var conf: any = config.get('dpool');
+    if (conf instanceof Error) {
+      logger.warn({ err: conf as Error, }, "Error loading configurations");
     } else {
-      // add workers  
-      if (config.workerGroups) {
-        config.workerGroups.forEach(group => {
+      logger.info("Configurations loaded: %s", conf);
+
+      // add workers
+      if (conf.workerGroups) {
+        conf.workerGroups.forEach(group => {
           group.hosts.forEach(host => {
             dpool.workerMan.newWorker({
               host: host,
@@ -69,23 +72,25 @@ export default class DownloaderPool {
       }
 
       // load domain intervals
-      if (config.mmdRepoUrl) {
-        request(config.mmdRepoUrl, (err, resp, body) => {
+      if (conf.mmdRepoUrl) {
+        request(conf.mmdRepoUrl, (err, resp, body) => {
           if (err) {
             logger.error({
               err: err,
-              mmdRepoUrl: config.mmdRepoUrl,
+              mmdRepoUrl: conf.mmdRepoUrl,
             }, "error loading mmd repo");
             return callback(err, null);
           }
 
-          var repo = parseJson(body);
-          if (repo instanceof Error) {
+          var repo = null;
+          try {
+            repo = JSON.parse(body);
+          } catch (err) {
             logger.error({
               err: err,
-              mmdRepoUrl: config.mmdRepoUrl,
+              mmdRepoUrl: conf.mmdRepoUrl,
             }, "error parsing mmd repo");
-            return callback(repo, null);
+            return callback(err, null);
           }
 
           var sites = repo.meta_metadata_repository.sites;
