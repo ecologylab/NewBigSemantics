@@ -10,6 +10,7 @@ export interface MiddlewareSet {
   index: Middleware;
   generated: Middleware;
 
+  bsTask: Middleware;
   bsTasks: Middleware;
   bsAgents: Middleware;
   dpoolTasks: Middleware;
@@ -17,18 +18,26 @@ export interface MiddlewareSet {
 }
 
 let baseURL = "http://localhost:";
+let bsTaskURL = "/BigSemanticsService/task.json";
 let bsTasksURL = "/BigSemanticsService/tasks.json";
 let bsAgentsURL = "/BigSemanticsService/agents.json";
 let dpoolWorkersURL = "/workers.json";
 let dpoolTasksURL = "/workers.json";
 
 function grabAndRespond(res: express.Response, port: number, url: string) {
-  console.log(baseURL + port + url);
   request(baseURL + port + url, null, (err, resp, body) => {
       res.setHeader("Content-Type", "application/json");
       res.send(body);
       res.end();
   });
+}
+
+function getBSTask(bsConfig: any): Middleware {
+  let result: Middleware = (req, res, next) => {
+    grabAndRespond(res, bsConfig.port, bsTaskURL + "?id=" + req.query.id);
+  };
+
+  return result;
 }
 
 function getBSTasks(bsConfig: any): Middleware {
@@ -67,6 +76,7 @@ export function create(bsConfig: any, dpoolConfig: any, callback: (err: Error, r
   callback(null, {
     index: express.static(path.join(__dirname, "../../static/dashboard")),
     generated: express.static(path.join(__dirname, "../dashboard/public")),
+    bsTask: getBSTask(bsConfig),
     bsTasks: getBSTasks(bsConfig),
     bsAgents: getBSAgents(bsConfig),
     dpoolTasks: getDPoolTasks(dpoolConfig),

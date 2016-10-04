@@ -38,6 +38,7 @@ dashboard.create(bsConfig, dpoolConfig, (err, res) => {
 
   router.use("/", res.index);
   router.use("/public", res.generated);
+  router.use("/bsTask.json", res.bsTask);
   router.use("/bsTasks.json", res.bsTasks);
   router.use("/bsAgents.json", res.bsAgents);
   router.use("/dpoolTasks.json", res.dpoolTasks);

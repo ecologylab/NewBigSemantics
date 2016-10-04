@@ -93,7 +93,14 @@ export default class DownloaderPool {
             return callback(err, null);
           }
 
-          var sites = repo.meta_metadata_repository.sites;
+          var sites = null;
+
+          if(repo.meta_metadata_repository) {
+            sites = repo.meta_metadata_repository.sites;
+          } else if(repo.repository) {
+            sites = repo.repository.sites;
+          }
+          
           if (sites) {
             sites.forEach((site) => {
               dpool.matcher.setDomainInterval(site.domain, {

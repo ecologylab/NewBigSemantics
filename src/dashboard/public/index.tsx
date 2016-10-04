@@ -22,7 +22,7 @@ interface Task {
 }
 
 function showDetails(taskId: string) {
-  $.get("../task.json?id=" + taskId, task => {
+  $.get("bsTask.json?id=" + taskId, task => {
     ReactDOM.render(
       <TaskView task={task} />,
       document.getElementById("taskInfo")
