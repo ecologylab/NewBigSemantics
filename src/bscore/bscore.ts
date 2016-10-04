@@ -32,9 +32,6 @@ declare var extractMetadata: IExtractor;
 declare var respond: (err: any, result: any) => void;
 
 var ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga', 'css'];
-var proxyURL = "http://api.ecologylab.net:3000/proxy?url=";
-// var proxyURL = "http://localhost:3000/proxy?url=";
-var proxyBlacklist = ['ecologylab.net'];
 
 export default class BSPhantom extends BigSemantics {
   private options: any;
@@ -43,6 +40,8 @@ export default class BSPhantom extends BigSemantics {
   constructor(repoSource: any, options: any) {
     options = options || {};
     var master = options.master || new pm.Master();
+
+    var proxyBlacklist = options.proxy_blacklist;
 
     var mmdRepo = null;
     options.extractor = (() => {
@@ -64,14 +63,14 @@ export default class BSPhantom extends BigSemantics {
             })
             .onTask(task => tasks.push(task));
 
-        if (this.options.proxyURL) {
+        if (this.options.proxy_url) {
           if (task) {
-            task.log("Using Proxy", this.options.proxyURL);
+            task.log("Using Proxy", this.options.proxy_url);
           }
 
           page
-            .setProxy(this.options.proxyURL)
-            .setProxyBlacklist(this.options.proxyBlacklist);
+            .setProxy(this.options.proxy_url)
+            .setProxyBlacklist(this.options.proxy_blacklist);
         }
 
         page.open(resp.location)

@@ -257,13 +257,9 @@ var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
 export function create(callback: (err: Error, result: MiddlewareSet) => void, options?: any): void {
   options = options || {};
   
-  var repoSource = options.repoSource || {
-    url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json'
-  };
-
   options.downloader = new BaseDownloader();
 
-  var bs = new BSPhantom(repoSource, options);
+  var bs = new BSPhantom(options.repo_source, options);
 
   bs.onReady((err, bs) => {
     if (err) {

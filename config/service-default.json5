@@ -6,4 +6,8 @@
   use_https: false,
   // passphrase: '<your passphrase if any>',
   // pfx_path: '<path to your PFX file>',
+
+  repo_source: { url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json' },
+  proxy_url: 'dpool',
+  proxy_blacklist: ['ecologylab.net'],
 }
