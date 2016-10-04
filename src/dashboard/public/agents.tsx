@@ -27,7 +27,7 @@ class AgentsList extends React.Component<{}, AgentsState> {
   }
 
   updateAgents() {
-    $.get("../agents.json", resp => {
+    $.getJSON("bsAgents.json", resp => {
       this.setState({
         agents: resp.agents
       });

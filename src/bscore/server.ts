@@ -9,7 +9,6 @@ import logger from './logging';
 import * as config from '../utils/config';
 
 import * as bsservice from './middleware';
-import * as dashboard from '../dashboard/middleware';
 
 var conf: any = config.get('service');
 if (conf == null) {
@@ -47,16 +46,6 @@ if (conf == null) {
     bsRouter.use("/downloaders.json", res.downloadersInfoJson);
 
     bsRouter.use(res.errorHandler);
-  });
-
-  dashboard.create((err, res) => {
-    if(err) {
-      console.error(err);
-      return;
-    }
-
-    bsRouter.use("/dashboard", res.index);
-    bsRouter.use("/dashboard/public", res.generated);
   });
 
   var app = express();

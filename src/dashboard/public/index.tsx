@@ -92,7 +92,7 @@ class TasksList extends React.Component<{}, TasksState> {
   }
 
   updateTasks() {
-    $.get("../tasks.json?page=" + this.state.page, resp => {
+    $.getJSON("bsTasks.json?page=" + this.state.page, resp => {
       resp.tasks.reverse();
 
       if(this.state.tasks.length > 0) {

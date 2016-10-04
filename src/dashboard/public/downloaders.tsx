@@ -31,7 +31,7 @@ class DownloadersList extends React.Component<{}, DownloadersState> {
   }
 
   updateDownloaders() {
-    $.get("../downloaders.json", resp => {
+    $.getJSON("dpoolWorkers.json", resp => {
       let ready = 0;
       let unresponsive = 0;
 
@@ -41,6 +41,9 @@ class DownloadersList extends React.Component<{}, DownloadersState> {
 
         worker.stats.speed = megabits / seconds;
 
+        if(isNaN(worker.stats.speed))
+          worker.stats.speed = "N/A";
+
         if(worker.state == "ready" || worker.state == "busy") {
           ready += 1;
         } else {
@@ -48,13 +51,13 @@ class DownloadersList extends React.Component<{}, DownloadersState> {
         }
       }
 
-      this.setState({
-        downloaders: resp
-      });
-      
       $("#numDownloaders").html(resp.length);
       $("#readyDownloaders").html(ready as any);
       $("#unresponsiveDownloaders").html(unresponsive as any);
+
+      this.setState({
+        downloaders: resp
+      });
     });
   }
 
@@ -95,7 +98,7 @@ class DownloadersList extends React.Component<{}, DownloadersState> {
           </tr>
         </thead>
         <tbody>
-          { this.renderDownloaders }
+          { this.renderDownloaders() }
         </tbody>
       </table>
     );
