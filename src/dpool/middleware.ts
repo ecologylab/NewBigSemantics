@@ -4,9 +4,10 @@
 /// <reference path="./xml.d.ts" />
 
 import * as express from 'express';
+import * as fs from 'fs';
 import * as xml from 'xml';
 import DownloaderPool from './dpool';
-import * as fs from 'fs';
+import logger from './logging';
 
 interface Request extends express.Request {
   dpool: {
@@ -252,6 +253,12 @@ var workersFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
 
 export function create(callback: (err: Error, result: MiddlewareSet)=>void): void {
   DownloaderPool.create((err, dpool) => {
+    if (err) {
+      logger.error(err, 'Error creating dpool middleware set');
+      callback(err, null);
+      return;
+    }
+
     var result: MiddlewareSet = {
       validateParams: validateParams,
       download: downloadFactory(dpool),
