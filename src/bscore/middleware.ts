@@ -173,7 +173,13 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
         return next(new Error("The requested Meta-Metadata could not be found."));
       }
 
-      response.wrapper = result["meta_metadata"];
+      if (result.wrapper) {
+        response.wrapper = result.wrapper;
+      } else if (result.meta_metadata) {
+        response.wrapper = result.meta_metadata;
+      } else if (result.mmd) {
+        response.wrapper = result.mmd;
+      }
 
       sendResponse(req, res, response, format);
 
@@ -252,11 +258,11 @@ var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
 /**
  * Instantiates the BigSemanticsService and returns the middleware functions
  * @param {(err: Error, result: MiddlewareSet) => void} callback
- * @param {any} repoSource - The location from which to obtain the mmd repository 
+ * @param {any} repoSource - The location from which to obtain the mmd repository
  */
 export function create(callback: (err: Error, result: MiddlewareSet) => void, options?: any): void {
   options = options || {};
-  
+
   options.downloader = new BaseDownloader();
 
   var bs = new BSPhantom(options.repo_source, options);
