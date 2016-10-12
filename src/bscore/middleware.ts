@@ -116,15 +116,26 @@ function metadataFactory(bs: BSPhantom, format?: string): Middleware {
   return result;
 }
 
-function repositoryFactory(bs: BSPhantom, format?: string): Middleware {
+var cachedRepo = null;
+function repositoryFactory(bs: BSPhantom, format: string): Middleware {
   var result: Middleware = function (req, res, next) {
     let task = new Task(req.originalUrl);
     task.log("task initiated");
 
     var response = {
-      id: task.id,
+      // id: task.id,
       repository: bs.getRepo()["meta_metadata_repository"],
     };
+
+    if(format == "json") {
+      if(cachedRepo == null) {
+        cachedRepo = simpl.serialize(response);
+      }
+      
+      res.contentType('application/json');
+      res.send(cachedRepo);
+      return;
+    }
 
     copyParameters(req, response, task);
 
@@ -275,13 +286,13 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, op
       logger.info("BSPhantom ready");
 
       callback(null, {
-        metadataJson: metadataFactory(bs),
+        metadataJson: metadataFactory(bs, "json"),
         metadataJsonp: metadataFactory(bs, "jsonp"),
 
-        repositoryJson: repositoryFactory(bs),
+        repositoryJson: repositoryFactory(bs, "json"),
         repositoryJsonp: repositoryFactory(bs, "jsonp"),
 
-        wrapperJson: wrapperFactory(bs),
+        wrapperJson: wrapperFactory(bs, "json"),
         wrapperJsonp: wrapperFactory(bs, "jsonp"),
 
         tasksJson: taskListFactory(),

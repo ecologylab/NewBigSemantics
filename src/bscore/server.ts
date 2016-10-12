@@ -4,10 +4,10 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as https from 'https';
 import * as express from 'express';
+import * as compression from 'compression';
 
 import logger from './logging';
 import * as config from '../utils/config';
-
 import * as bsservice from './middleware';
 
 function loadConfigOrQuit(file: string): any {
@@ -63,6 +63,8 @@ bsservice.create((err, res) => {
 }, conf);
 
 var app = express();
+app.use(compression())
+
 app.use("/BigSemanticsService", bsRouter);
 var httpServer = http.createServer(app);
 httpServer.listen(conf.port);
