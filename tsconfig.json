@@ -1,12 +1,10 @@
 {
-  "compileOnSave": true,
   "compilerOptions": {
     "module": "commonjs",
     "rootDir": "src",
     "outDir": "build",
     "target": "es6",
-    "jsx": "react",
-    "watch": true
+    "jsx": "react"
   },
   "exclude": [
     "node_modules",
