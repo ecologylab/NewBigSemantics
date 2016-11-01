@@ -86,7 +86,16 @@ export default class Dispatcher extends events.EventEmitter {
                   name: 'finished',
                 });
               logger.info({ url: task.url, id: task.id, }, "task successfully finished");
-              parseHttpResp(task.url, presult.stdout, (err, resp) => {
+
+              // hack for binary files
+              let strStdout: string = presult.stdout.toString();
+              let end = strStdout.indexOf("\r\n\r\n") + 4;
+
+              parseHttpResp(task.url, new Buffer(strStdout), (err, resp) => {
+                if(resp) {
+                  resp.raw = presult.stdout.slice(end);
+                }
+
                 task.response = resp;
                 if (typeof task.callback === 'function') {
                   if (err) {

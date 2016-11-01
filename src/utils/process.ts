@@ -4,10 +4,20 @@
 
 import * as cp from 'child_process';
 
+interface SpawnResult {
+  code?: number;
+  signal?: any;
+  
+  cmd: string;
+  args: string[];
+  stdout: Buffer;
+  stderr: Buffer;
+}
+
 export function spawn(cmd: string,
                       args: Array<string>,
                       options: any,
-                      callback: (err: Error, result: any)=>void): void {
+                      callback: (err: Error, result: SpawnResult)=>void): void {
   options = options || {};
   options.stdio = options.stdio || [ 'ignore', 'pipe', 'pipe' ];
   var p = cp.spawn(cmd, args, options);
@@ -25,8 +35,8 @@ export function spawn(cmd: string,
       callback(error, {
         cmd: cmd,
         args: args,
-        stdout: stdout ? stdout.toString() : null,
-        stderr: stderr ? stderr.toString() : null,
+        stdout: stdout,
+        stderr: stderr,
       });
     }
   });
@@ -41,8 +51,8 @@ export function spawn(cmd: string,
         signal: signal,
         cmd: cmd,
         args: args,
-        stdout: stdout ? stdout.toString() : null,
-        stderr: stderr ? stderr.toString() : null,
+        stdout: stdout,
+        stderr: stderr,
       });
     }
   });
