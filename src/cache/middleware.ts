@@ -1,9 +1,11 @@
 /// <reference path="./minio.d.ts" />
 
-import { base32enc } from '../utils/codec';
-import * as express from 'express';
-import * as Minio from 'minio';
-import * as request from 'request';
+import { base32enc } from "../utils/codec";
+import * as express from "express";
+import * as Minio from "minio";
+import * as request from "request";
+import logger from "./logging";
+import Task from "./task";
 
 export interface Middleware {
   (req: express.Request, resp: express.Response, next: express.NextFunction);
@@ -17,28 +19,38 @@ function retrievalFactory(mc: Minio, options: any): Middleware {
   return (req, res, next) => {
     let url = req.query.url;
     let hashedUrl = base32enc(url);
+    let task = new Task(url);
 
     mc.getObject("cache", hashedUrl, (err, stream) => {
       // cache hit
       if (!err) {
+        task.log("Cache hit");
         stream.pipe(res);
+        logger.info(task, "Retrieval successful");
       } else {
+        task.log("Cache miss");
+        
         request(`http://localhost:${options.dpool.port}/proxy?url=${url}`, (err, resp, body) => {
           if (err) {
-            console.error("Error downloading from DPool: " + err);
+            task.log("Error downloading from DPool", err);
+            logger.error(task, "Failed to download");
             res.status(500);
             return;
           }
 
           res.end(body);
 
-          mc.putObject("cache", hashedUrl, body, "text/html", (err, etag) => {
-            if (err) {
-              console.error("Error caching downloaded object: " + err);
+          task.log("Downloaded, storing in cache");
+          task.log("Content-Type", resp.headers["content-type"])
+          mc.putObject("cache", hashedUrl, body, resp.headers["content-type"], (err, etag) => {
+            if (err) {;
+              task.log("Error caching downloaded object", err);
+              logger.error(task, "Error caching object");
               return;
             }
 
-            console.log(`Cached ${url} successfully.`);
+            task.log("Cached successfully");
+            logger.info(task, "Caching succesful");
           });
         });
       }
@@ -50,9 +62,7 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, op
   options = options || {};
 
   if (!options.cache || !options.dpool) {
-    console.error("Incomplete cache options!");
-    console.error("Cache Options: " + JSON.stringify(options.cache));
-    console.error("DPool Options: " + JSON.stringify(options.dpool));
+    logger.error(options, "Incomplete cache options");
   }
 
   let mc = new Minio({
@@ -65,10 +75,14 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, op
 
   mc.bucketExists("cache", (err) => {
     if (err) {
-      if (err.code != "NoSuchBucket") console.error("Could not check if cache bucket exists!");
+      if (err.code != "NoSuchBucket") {
+        logger.error(err, "Could not check if cache bucket exists");
+      }
 
       mc.makeBucket("cache", "us-east-1", (err) => {
-        if (err) console.error("Error creating cache bucket: " + err);
+        if (err) {
+          logger.error(err, "Error creating cache bucket");
+        }
       });
     }
   });

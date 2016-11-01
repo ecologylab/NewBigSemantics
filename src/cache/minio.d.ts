@@ -1,3 +1,7 @@
+// Corresponds to Minio-js version 2.0.3
+// Made from https://docs.minio.io/docs/javascript-client-api-reference
+// (NPM module isn't up to date with documentation)
+
 declare module "minio" {
   import * as stream from 'stream';
   import * as events from 'events';
@@ -64,9 +68,7 @@ declare module "minio" {
     on(event: string, callback: () => void);
     on(event: "data", callback: (obj: T) => void);
     on(event: "error", callback: (err) => void);
-    on(evenT: "end", callback: () => void);
-
-    // pipe(dest: any);
+    on(event: "end", callback: () => void);
   }
 
   class minio {
