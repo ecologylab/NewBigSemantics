@@ -22,7 +22,7 @@ middleware.create((err, mws) => {
   app.get('/workers.json', mws.workers);
   // FIXME remove the following routes -- they are merely for backward
   // compatibility.
-  app.get('/DownloaderPool/echo/get', mws.validateParams, mws.get);
+  app.get('/DownloaderPool/echo/get', mws.get);
   app.get('/DownloaderPool/page/download.json', mws.validateParams, mws.downloadJson);
   app.get('/DownloaderPool/page/download.xml', mws.validateParams, mws.downloadXml);
   // FIXME make it possible to change the port.
