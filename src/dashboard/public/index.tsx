@@ -227,7 +227,7 @@ class TaskView extends React.Component<TaskProps, {}> {
             </div>
             <div className="content">
               <div className="ui form">
-                <textarea rows="25">{JSON.stringify(task, null, 2)}</textarea>
+                <textarea rows={25}>{JSON.stringify(task, null, 2)}</textarea>
               </div>
             </div>
           </div>

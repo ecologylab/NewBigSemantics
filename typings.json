@@ -1,6 +1,7 @@
 {
   "name": "bigsemantics",
-  "dependencies": {},
+  "dependencies": {
+  },
   "globalDependencies": {
     "bluebird": "registry:dt/bluebird#2.0.0+20160319051630",
     "bunyan": "registry:dt/bunyan#0.0.0+20160412155112",
@@ -13,6 +14,7 @@
     "json5": "registry:dt/json5#0.0.0+20160316155526",
     "lru-cache": "registry:dt/lru-cache#2.5.0+20160317120654",
     "mime": "registry:dt/mime#0.0.0+20160316155526",
+    "mongodb": "registry:dt/mongodb#2.1.0+20161110150902",
     "node": "registry:dt/node#6.0.0+20160524002506",
     "react": "registry:dt/react#0.14.0+20160927082313",
     "react-dom": "registry:dt/react-dom#0.14.0+20160412154040",
