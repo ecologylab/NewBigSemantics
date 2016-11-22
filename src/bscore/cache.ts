@@ -1,7 +1,7 @@
 import * as mongo from "mongodb";
 import { logger } from "./logging";
 import { sha256, base32enc } from "../utils/codec"
-import RepoMan from "../../BigSemanticsJavaScript/bsjsCore/RepoMan";
+import RepoMan from "../../BigSemanticsJavaScript/build/core/RepoMan";
 
 let MongoClient = mongo.MongoClient;
 
@@ -104,17 +104,14 @@ export class MetadataCache {
   /**
    * Sets up connection to MongoDB with the parameters supplied in the constructor
    */
-  connect() {
-    return new Promise<void>((resolve, reject) => {
-      MongoClient.connect(this.settings.mongo.url).then(db => {
-        this.db = db;
-        this.mdCollection = db.collection(this.settings.mongo.collection);
-        resolve();
-      }).catch(err => {
-        logger.fatal({ err: err }, "Could not connect to MongoDB");
-        reject(err);
-      });
+  async connect() {
+    let db = await MongoClient.connect(this.settings.mongo.url).catch(err => {
+      logger.fatal({ err: err }, "Could not connect to MongoDB");
+      throw err;
     });
+
+    this.db = db;
+    this.mdCollection = db.collection(this.settings.mongo.collection);
   }
 
   /**
@@ -123,64 +120,58 @@ export class MetadataCache {
   async get(key: string, readThrough: (key: string) => Promise<any>) {
     let repoMan = this.settings.repoMan;
 
-    // todo: fix this mess
-    return new Promise<any>((resolve, reject) => {
-      // todo: move this over to TypeScript version of BSJ, 
-      // then can use await to make this *much* cleaner
-      repoMan.selectMmd(key, null, (err, resp) => {
-        let mmd = resp as any;
-        if (err) mmd = {} as any;
+    let mmd = await repoMan.selectMmd(key, null).catch(e => {
+      logger.fatal({ err: e }, `Could not get mmd for ${key}`);
+      // in async function this will just go to the catch branch
+      // of the resulting promise
+      throw e;
+    }) as any;
 
-        if (!mmd.fingerprint) {
-          mmd.fingerprint = calculateMmdHash(mmd);
-        }
+    if(!mmd.fingerprint) {
+      mmd.fingerprint = calculateMmdHash(mmd);
+    }
 
-        let noCache = mmd.wrapper.no_cache;
-        let expirationDuration = mmd.cache_life || this.defaultCacheDuration;
-        let expirationDate = getExpirationDate(expirationDuration);
+    let cache = !mmd.no_cache;
+    let expirationDuration = mmd.cache_life || this.defaultCacheDuration;
+    let expirationDate = getExpirationDate(expirationDuration);
 
-        this.mdCollection.findOne({ key: key }).then(resp => {
-          let md = resp && resp.metadata;
-          if (md && md.expires && md.expires > new Date()
-            && md.mmdFingerprint === mmd.fingerprint) {
-            // cache hit
-            resolve({ metadata: resp.metadata.metadata });
-          } else {
-            // cache expired or mmd hash changed, delete old entry
-            if (resp) {
-              this.mdCollection.deleteMany({
-                key: key
-              }).catch(err => {
-                logger.error({ err: err }, "Could not delete expired metadata from cache");
-              });
-            }
-            // cache miss or cache expired, use readThrough function
-            return readThrough(key);
-          }
-        }).then(md => {
-          // actually should change this structure
-          // this .then is called even if the above .then doesn't return anything
-          if (!md) return;
-          // cache miss, call the readThrough function 
-          // and put metadata in cache
-          if (!noCache) {
-            this.put(key, {
-              metadata: md.metadata,
-              expires: expirationDate,
-              mmdFingerprint: mmd.fingerprint
-            }).catch(err => {
-              logger.error({ err: err }, "Could not store metadata in cache");
-            });
-          }
-
-          resolve(md);
-        }).catch(err => {
-          // not in cache and couldn't get from readThrough function
-          logger.fatal({ err: err }, "Could not retrieve metadata from cache/readThrough");
-          reject(err);
-        });
-      });
+    let res = await this.mdCollection.findOne({ key: key}).catch(e => {
+      logger.fatal("Could not retrieve metadata from cache");
     });
+
+    // check if metadata has expired or doesn't match the mmd's current fingerprint
+    let md = res && res.metadata;
+    if(md && md.expires > new Date() && md.mmdFingerprint === mmd.fingerprint) {
+      return {
+        metadata: md.metadata
+      };
+    } else if(md) {
+      // if md isn't null/undefined, it must be in database, but expired
+      // so delete it
+
+      // await to prevent somewhat possible race condition
+      await this.mdCollection.deleteMany({ key: key }).catch(e => {
+        logger.error({ err: e }, "Could not deleted expired metadata from cache");
+      });
+    }
+
+    // couldn't get metadata from cache, so use readThrough function
+    md = await readThrough(key).catch(e => {
+      logger.error({ err: e}, "Could not retrieve metadata from readThrough function");
+      throw e;
+    }); 
+
+    if(cache) {
+      this.put(key, {
+        metadata: md.metadata,
+        expires: expirationDate,
+        mmdFingerprint: mmd.fingerprint
+      }).catch(err => {
+        logger.error({ err: err }, "Could not store metadata in cache");
+      });
+    }
+
+    return md;
   }
 
   /**
@@ -188,11 +179,9 @@ export class MetadataCache {
    * Key likely being a URL
    */
   put(key: string, md: any) {
-    return new Promise<void>((resolve, reject) => {
-      return this.mdCollection.insert({
-        key: key,
-        metadata: md
-      });
+    return this.mdCollection.insert({
+      key: key,
+      metadata: md
     });
   }
 }

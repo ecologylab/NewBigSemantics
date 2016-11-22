@@ -1,6 +1,6 @@
 import BSPhantom from './bscore';
 import logger from './logging';
-import RepoMan from "../../BigSemanticsJavaScript/bsjsCore/RepoMan";
+import RepoMan from "../../BigSemanticsJavaScript/build/core/RepoMan";
 import { BaseDownloader } from './downloader';
 import { Task } from './task';
 import { taskMon } from '../bscore/logging';
@@ -297,9 +297,11 @@ export function create(callback: (err: Error, result: MiddlewareSet) => void, op
   var bs = new BSPhantom(options.repo_source, options);
 
   bs.onReady((err, bs) => {
-    let repoMan = new RepoMan({ repo: bs.getRepo() }, null);
+    let repoMan = new RepoMan();
+    repoMan.load(bs.getRepo() as any, {});
+    //let repoMan = new RepoMan({ repo: bs.getRepo() }, null);
     let cache = new MetadataCache({
-      repoMan: repoMan,
+      repoMan: repoMan as any,
       mmdRepo: bs.getRepo(),
 
       mongo: {
