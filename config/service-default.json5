@@ -10,4 +10,9 @@
   repo_source: { url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json' },
   proxy_url: 'dpool',
   proxy_blacklist: ['ecologylab.net'],
+
+  metadata_cache: {
+    url: "mongodb://localhost:27017/MetadataCache",
+    cache_collection: "metadata"
+  }
 }

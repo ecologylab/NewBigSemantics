@@ -13,14 +13,16 @@
     "koa": "^1.2.0",
     "lru-cache": "^4.0.1",
     "minio": "^2.0.3",
+    "mongo": "^0.1.0",
+    "mv": "^2.1.1",
     "request": "^2.72.0",
     "socket.io": "^1.4.6",
     "xml": "^1.0.1"
   },
   "devDependencies": {
     "gulp": "^3.9.1",
-    "gulp-typescript": "^2.13.5",
-    "gulp-jasmine": "^2.3.0"
+    "gulp-jasmine": "^2.3.0",
+    "gulp-typescript": "^2.13.5"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
