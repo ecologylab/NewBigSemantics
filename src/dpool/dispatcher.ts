@@ -1,7 +1,5 @@
 // Dispatcher.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as events from 'events';
 import Matcher from './matcher';
 import TaskMan from './taskMan';

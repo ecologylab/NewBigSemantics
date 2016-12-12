@@ -1,7 +1,5 @@
 // Simple math related utilities.
 
-/// <reference path="../../typings/index.d.ts" />
-
 export function seq(n: number, startFrom: number = 0): Array<number> {
   var result = new Array();
   var k = startFrom;

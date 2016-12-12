@@ -1,7 +1,5 @@
 // The PhantomJS master.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as os from 'os';
 import * as child_process from 'child_process';
 import * as events from 'events';
@@ -440,11 +438,6 @@ export class Page extends events.EventEmitter {
 
   catch(callback: (err: Error)=>void): Page {
     this.promise = this.promise.catch(callback);
-    return this;
-  }
-
-  finally(callback: ()=>void): Page {
-    this.promise = this.promise.finally(callback);
     return this;
   }
 

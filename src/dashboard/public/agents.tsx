@@ -9,7 +9,7 @@ interface AgentsState {
   agents: Agent[]
 }
 
-class AgentsList extends React.Component<{}, AgentsState> { 
+class AgentsList extends React.Component<{}, AgentsState> {
   updateInterval: number;
 
   constructor(props) {

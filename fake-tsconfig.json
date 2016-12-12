@@ -1,10 +1,7 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "rootDirs": [
-      "src",
-      "BigSemanticsJavaScript/src"
-    ],
+    "rootDir": "src",
     "outDir": "build",
     "target": "es6",
     "jsx": "react"

@@ -1,13 +1,11 @@
 // Simple process related utilities.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as cp from 'child_process';
 
 interface SpawnResult {
   code?: number;
   signal?: any;
-  
+
   cmd: string;
   args: string[];
   stdout: Buffer;
@@ -56,7 +54,7 @@ export function spawn(cmd: string,
       });
     }
   });
-  p.stdout.on('data', (data) => {
+  p.stdout.on('data', (data: Buffer) => {
     if (!finished) {
       if (stdout === null) {
         stdout = data;
@@ -65,7 +63,7 @@ export function spawn(cmd: string,
       }
     }
   });
-  p.stderr.on('data', (data) => {
+  p.stderr.on('data', (data: Buffer) => {
     if (!finished) {
       if (stderr === null) {
         stderr = data;

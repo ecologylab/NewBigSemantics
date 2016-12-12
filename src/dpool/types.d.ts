@@ -1,7 +1,5 @@
 // Type definitions, for TypeScript.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import { SOCKSConnection } from './socksConnection';
 
 export interface HttpHeader {

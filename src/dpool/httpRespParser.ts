@@ -1,7 +1,5 @@
 // A HTTP response parser.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as nodeUrl from 'url';
 import { HttpHeader, HttpResponse } from './types';
 

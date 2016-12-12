@@ -42,8 +42,6 @@
 // var conf = config.get('my-component');
 // console.log("merged configuration, as an object: ", conf);
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';

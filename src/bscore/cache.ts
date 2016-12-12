@@ -1,7 +1,7 @@
 import * as mongo from "mongodb";
 import { logger } from "./logging";
 import { sha256, base32enc } from "../utils/codec"
-import RepoMan from "../../BigSemanticsJavaScript/build/core/RepoMan";
+import RepoMan from "../core/RepoMan";
 
 let MongoClient = mongo.MongoClient;
 
@@ -159,7 +159,7 @@ export class MetadataCache {
     md = await readThrough(key).catch(e => {
       logger.error({ err: e}, "Could not retrieve metadata from readThrough function");
       throw e;
-    }); 
+    });
 
     if(cache) {
       this.put(key, {

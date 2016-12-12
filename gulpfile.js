@@ -4,11 +4,17 @@ var gulp = require('gulp');
 var gutil = require('gulp-util');
 var ts = require('gulp-typescript');
 var jasmine = require('gulp-jasmine');
+var del = require('del');
 
-var tsProject = ts.createProject('tsconfig.json');
+var bsTsProject = ts.createProject('BigSemanticsJavaScript/tsconfig.json');
+var tsProject = ts.createProject('fake-tsconfig.json');
 
-gulp.task('tsc', function() {
-  return tsProject.src().pipe(ts(tsProject)).js.pipe(gulp.dest('build'));
+gulp.task('compile-bigsemantics', function() {
+  return bsTsProject.src().pipe(bsTsProject()).js.pipe(gulp.dest('build'));
+});
+
+gulp.task('compile', function() {
+  return tsProject.src().pipe(tsProject()).js.pipe(gulp.dest('build'));
 });
 
 gulp.task('copy-files', function() {
@@ -22,6 +28,12 @@ gulp.task('copy-files', function() {
   return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
 });
 
+gulp.task('default', [ 'compile-bigsemantics', 'compile', 'copy-files' ]);
+
+gulp.task('clean', function() {
+  del.sync(['build']);
+});
+
 gulp.task('testExtractor', function() {
   gulp.src('build/bscore/test/testExtractor.js').pipe(jasmine());
 });
@@ -31,5 +43,3 @@ gulp.task('testHttpRespParser', function() {
 });
 
 gulp.task('test', [ 'testExtractor', 'testHttpRespParser' ]);
-
-gulp.task('default', ['tsc', 'copy-files']);

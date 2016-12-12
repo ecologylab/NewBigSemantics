@@ -1,15 +1,15 @@
-import BSPhantom from './bscore';
-import logger from './logging';
-import RepoMan from "../../BigSemanticsJavaScript/build/core/RepoMan";
-import { BaseDownloader } from './downloader';
-import { Task } from './task';
-import { taskMon } from '../bscore/logging';
-import { Metadata } from "../../BigSemanticsJavaScript/bsjsCore/BigSemantics";
-import { MetadataCache } from "./cache";
 import * as request from 'request';
-import * as simpl from '../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase';
 import * as express from 'express';
 import * as fs from 'fs';
+import * as simpl from 'simpl.js';
+import RepoMan from "../core/RepoMan";
+import { Metadata } from "../core/types";
+import logger from './logging';
+import { taskMon } from '../bscore/logging';
+import { Task } from './task';
+import BSPhantom from './bscore';
+import RequestDownloader from './request-downloader';
+import { MetadataCache } from "./cache";
 
 export interface Middleware {
   (req: express.Request, resp: express.Response, next: express.NextFunction): void;
@@ -71,23 +71,6 @@ function sendResponse(req: express.Request, res: express.Response, data: Respons
   }
 }
 
-/**
- * Promisifies loadMetadata
- * Needed for readThrough function to the Metadata Cache
- */
-function promisifiedLoadMetadata(bs: BSPhantom, url: string, options) {
-  return new Promise<Metadata>((resolve, reject) => {
-    bs.loadMetadata(url, options, (err, result) => {
-      if(err) {
-        reject(err);
-        return;
-      }
-
-      resolve(result);
-    });
-  });
-}
-
 function metadataFactory(bs: BSPhantom, cache: MetadataCache, format?: string): Middleware {
   var result: Middleware = function (req, res, next) {
     var url = req.query.url || req.query.uri;
@@ -104,7 +87,11 @@ function metadataFactory(bs: BSPhantom, cache: MetadataCache, format?: string): 
     if (url) {
       // readThrough function that cache will use if Metadata not found
       let readThrough = (url: string) => {
-        return promisifiedLoadMetadata(bs, url, { task: task });
+        return new Promise((resolve, reject) => {
+          bs.loadMetadata(url, { task: task })
+          .then(result => resolve(result))
+          .catch(err => reject(err));
+        });
       };
 
       cache.get(url, readThrough).then(result => {
@@ -140,29 +127,30 @@ function repositoryFactory(bs: BSPhantom, format: string): Middleware {
     let task = new Task(req.originalUrl);
     task.log("task initiated");
 
-    var response = {
-      repository: bs.getRepo()["meta_metadata_repository"],
-    };
+    bs.getRepository().then(typedRepo => {
+      var response = {
+        repository: typedRepo.meta_metadata_repository,
+      };
 
-    if(format == "json") {
-      if(cachedRepo == null) {
-        cachedRepo = simpl.serialize(response);
+      if(format == "json") {
+        if(cachedRepo == null) {
+          cachedRepo = simpl.serialize(response);
+        }
+
+        res.contentType('application/json');
+        res.send(cachedRepo);
+        return;
       }
-      
+
+      copyParameters(req, response, task);
+
       res.contentType('application/json');
-      res.send(cachedRepo);
-      return;
-    }
+      sendResponse(req, res, response, format);
 
-    copyParameters(req, response, task);
-
-    res.contentType('application/json');
-    sendResponse(req, res, response, format);
-
-    task.log("task completed successfully");
-    logger.info(task, "mmdrepository task succeeded");
+      task.log("task completed successfully");
+      logger.info(task, "mmdrepository task succeeded");
+    });
   }
-
   return result;
 }
 
@@ -182,10 +170,14 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
 
     if (name) {
       task.log("mmd requested by name", name);
-      bs.loadMmd(name, {}, mmdCallback);
+      bs.loadMmd(name, {})
+      .then(result => mmdCallback(undefined, result))
+      .catch(err => mmdCallback(err, undefined));
     } else if (url) {
       task.log("mmd requested by url", url);
-      bs.selectMmd(url, {}, mmdCallback);
+      bs.selectMmd(url, {})
+      .then(result => mmdCallback(undefined, result))
+      .catch(err => mmdCallback(err, undefined));
     } else {
       task.log("failure: no name or url specified");
       logger.warn(task, "meta-metadata task could not be completed - no parameters");
@@ -290,54 +282,58 @@ var errorHandler: express.ErrorRequestHandler = function (err, req, res, next) {
  */
 export function create(callback: (err: Error, result: MiddlewareSet) => void, options?: any): void {
   options = options || {};
-  options.downloader = new BaseDownloader();
+  options.downloader = new RequestDownloader();
 
   let cacheSettings = options.metadata_cache;
 
-  var bs = new BSPhantom(options.repo_source, options);
+  var bs = new BSPhantom();
+  bs.load(options);
 
   bs.onReady((err, bs) => {
-    let repoMan = new RepoMan();
-    repoMan.load(bs.getRepo() as any, {});
+    let repoMan = bs.getRepoMan();
+    // repoMan.load(bs.getRepo() as any, {});
     //let repoMan = new RepoMan({ repo: bs.getRepo() }, null);
-    let cache = new MetadataCache({
-      repoMan: repoMan as any,
-      mmdRepo: bs.getRepo(),
 
-      mongo: {
-        url: options.mongoUrl,
-        collection: cacheSettings.cache_collection
+    repoMan.getRepository().then(repo => {
+      let cache = new MetadataCache({
+        repoMan: repoMan as any,
+        mmdRepo: repo,
+
+        mongo: {
+          url: options.mongoUrl,
+          collection: cacheSettings.cache_collection
+        }
+      });
+
+      cache.connect().catch(err => {
+        logger.fatal({ err: err }, "Could not connect to cache");
+      });
+
+      if (err) {
+        logger.error({ err: err }, "error starting BSPhantom");
+        callback(err, null);
+      } else {
+        logger.info("BSPhantom ready");
+
+        callback(null, {
+          metadataJson: metadataFactory(bs, cache, "json"),
+          metadataJsonp: metadataFactory(bs, cache, "jsonp"),
+
+          repositoryJson: repositoryFactory(bs, "json"),
+          repositoryJsonp: repositoryFactory(bs, "jsonp"),
+
+          wrapperJson: wrapperFactory(bs, "json"),
+          wrapperJsonp: wrapperFactory(bs, "jsonp"),
+
+          tasksJson: taskListFactory(),
+          taskJson: taskDetailFactory(),
+
+          agentsInfoJson: agentsInfoFactory(bs),
+          downloadersInfoJson: downloadersInfoFactory(),
+
+          errorHandler: errorHandler
+        });
       }
     });
-
-    cache.connect().catch(err => {
-      logger.fatal({ err: err }, "Could not connect to cache");
-    });
-    
-    if (err) {
-      logger.error({ err: err }, "error starting BSPhantom");
-      callback(err, null);
-    } else {
-      logger.info("BSPhantom ready");
-
-      callback(null, {
-        metadataJson: metadataFactory(bs, cache, "json"),
-        metadataJsonp: metadataFactory(bs, cache, "jsonp"),
-
-        repositoryJson: repositoryFactory(bs, "json"),
-        repositoryJsonp: repositoryFactory(bs, "jsonp"),
-
-        wrapperJson: wrapperFactory(bs, "json"),
-        wrapperJsonp: wrapperFactory(bs, "jsonp"),
-
-        tasksJson: taskListFactory(),
-        taskJson: taskDetailFactory(),
-
-        agentsInfoJson: agentsInfoFactory(bs),
-        downloadersInfoJson: downloadersInfoFactory(),
-
-        errorHandler: errorHandler
-      });
-    }
   });
 }
