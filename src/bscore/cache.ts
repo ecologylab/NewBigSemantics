@@ -1,8 +1,8 @@
 import * as mongo from "mongodb";
+import * as Promise from "bluebird";
 import { logger } from "./logging";
 import { sha256, base32enc } from "../utils/codec"
 import RepoMan from "../../BigSemanticsJavaScript/build/core/RepoMan";
-
 let MongoClient = mongo.MongoClient;
 
 export interface MetadataCacheSettings {
@@ -104,74 +104,81 @@ export class MetadataCache {
   /**
    * Sets up connection to MongoDB with the parameters supplied in the constructor
    */
-  async connect() {
-    let db = await MongoClient.connect(this.settings.mongo.url).catch(err => {
+  connect(): Promise<void> {
+    return MongoClient.connect(this.settings.mongo.url).then(db => {
+      this.db = db;
+      this.mdCollection = db.collection(this.settings.mongo.collection);
+    }).catch(err => {
       logger.fatal({ err: err }, "Could not connect to MongoDB");
       throw err;
     });
-
-    this.db = db;
-    this.mdCollection = db.collection(this.settings.mongo.collection);
   }
 
   /**
    * Retrieves metadata from cache, if not found calls readThrough function
    */
-  async get(key: string, readThrough: (key: string) => Promise<any>) {
+  get(key: string, readThrough: (key: string) => Promise<any>): Promise<{ metadata: any }> {
     let repoMan = this.settings.repoMan;
+    let mmd = null;
 
-    let mmd = await repoMan.selectMmd(key, null).catch(e => {
-      logger.fatal({ err: e }, `Could not get mmd for ${key}`);
-      // in async function this will just go to the catch branch
-      // of the resulting promise
-      throw e;
-    }) as any;
+    let doCache = false;
+    let expirationDuration = null;
+    let expirationDate = null;
 
-    if(!mmd.fingerprint) {
-      mmd.fingerprint = calculateMmdHash(mmd);
-    }
+    // yuck
+    return repoMan.selectMmd(key, null).then(metametadata => {
+      mmd = metametadata;
+    }).then(() => {
+      if(!mmd.fingerprint) {
+        mmd.fingerprint = calculateMmdHash(mmd);
+      }
 
-    let cache = !mmd.no_cache;
-    let expirationDuration = mmd.cache_life || this.defaultCacheDuration;
-    let expirationDate = getExpirationDate(expirationDuration);
+      doCache = !mmd.no_cache;
+      expirationDuration = mmd.cache_life || this.defaultCacheDuration;
+      expirationDate = getExpirationDate(expirationDuration);
 
-    let res = await this.mdCollection.findOne({ key: key}).catch(e => {
-      logger.fatal("Could not retrieve metadata from cache");
+      return this.mdCollection.findOne({ key: key }).catch(e => {
+        logger.fatal("Could not retrieve metadata from cache");
+      });
+    }).then(res => {
+      // check if metadata has expired or doesn't match the mmd's current fingerprint
+      let md = res && res.metadata;
+      if(md && md.expires > new Date() && md.mmdFingerprint === mmd.fingerprint) {
+        return {
+          metadata: md.metadata
+        };
+      } else if(md) {
+        // if md isn't null/undefined, it must be in database, but expired
+        // so delete it
+
+        return this.mdCollection.deleteMany({ key: key }).catch(e => {
+          logger.error({ err: e }, "Could not deleted expired metadata from cache");
+        });
+      }
+    }).then(md => {
+      if(md && md.metadata) {
+        return {
+          metadata: md.metadata
+        }
+      } else {
+        return readThrough(key).catch(e => {
+          logger.error({ err: e}, "Could not retrieve metadata from readThrough function");
+          throw e;
+        })
+      }
+    }).then(md => {
+      if(doCache) {
+        this.put(key, {
+          metadata: md.metadata,
+          expires: expirationDate,
+          mmdFingerprint: mmd.fingerprint
+        }).catch(err => {
+          logger.error({ err: err }, "Could not store metadata in cache");
+        })
+      }
+
+      return md;
     });
-
-    // check if metadata has expired or doesn't match the mmd's current fingerprint
-    let md = res && res.metadata;
-    if(md && md.expires > new Date() && md.mmdFingerprint === mmd.fingerprint) {
-      return {
-        metadata: md.metadata
-      };
-    } else if(md) {
-      // if md isn't null/undefined, it must be in database, but expired
-      // so delete it
-
-      // await to prevent somewhat possible race condition
-      await this.mdCollection.deleteMany({ key: key }).catch(e => {
-        logger.error({ err: e }, "Could not deleted expired metadata from cache");
-      });
-    }
-
-    // couldn't get metadata from cache, so use readThrough function
-    md = await readThrough(key).catch(e => {
-      logger.error({ err: e}, "Could not retrieve metadata from readThrough function");
-      throw e;
-    }); 
-
-    if(cache) {
-      this.put(key, {
-        metadata: md.metadata,
-        expires: expirationDate,
-        mmdFingerprint: mmd.fingerprint
-      }).catch(err => {
-        logger.error({ err: err }, "Could not store metadata in cache");
-      });
-    }
-
-    return md;
   }
 
   /**
