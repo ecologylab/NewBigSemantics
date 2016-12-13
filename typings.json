@@ -1,7 +1,6 @@
 {
   "name": "bigsemantics",
   "dependencies": {
-    "js-sha256": "registry:npm/js-sha256#0.3.0+20160427051917"
   },
   "globalDependencies": {
     "bluebird": "registry:dt/bluebird#2.0.0+20160319051630",
