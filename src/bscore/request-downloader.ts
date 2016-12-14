@@ -8,8 +8,10 @@ import ParsedURL from '../core/ParsedURL';
 import { HttpResponse } from '../core/types';
 import { RequestOptions, BaseDownloader } from '../core/downloader';
 
+/**
+ *
+ */
 export default class RequestDownloader extends BaseDownloader {
-
   static parseContentType(resp: HttpResponse, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
     if (matches) {
@@ -68,5 +70,4 @@ export default class RequestDownloader extends BaseDownloader {
       });
     }) as Promise<HttpResponse>;
   }
-
 }

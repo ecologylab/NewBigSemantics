@@ -9,10 +9,11 @@ export interface Task {
   logs?: Log[];
 
   stack?: string;
-  
+
   // for viewing in dashboard
   reqIp?: string;
   appId?: string;
+  appVer?: string;
   userId?: string;
   sessionId?: string;
   reqId?: string;

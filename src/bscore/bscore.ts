@@ -2,6 +2,7 @@
  * BigSemantics with PhantomJS for extraction.
  */
 
+import * as path from 'path';
 import * as Promise from 'bluebird';
 import * as simpl from 'simpl.js';
 import ParsedURL from '../core/ParsedURL';
@@ -9,7 +10,7 @@ import Readyable from '../core/Readyable';
 import {
   MetaMetadata,
   BuildInfo,
-  TypedRepository,
+  Repository,
   TypedMetadata,
   BSResult,
 } from '../core/types';
@@ -32,7 +33,7 @@ import * as pm from '../phantom/master';
  * @type {string[]}
  */
 let bsjsFiles = [
-  '../../BigSemanticsJavaScript/build/bigsemantics-core.js',
+  path.join(__dirname, '../bigsemantics-core.bundle.js'),
 ];
 
 /**
@@ -201,7 +202,7 @@ export default class BSPhantom extends AbstractBigSemantics {
     return this.repoMan.getBuildInfo(options);
   }
 
-  getRepository(options?: BSPhantomCallOptions): Promise<TypedRepository> {
+  getRepository(options?: BSPhantomCallOptions): Promise<Repository> {
     return this.repoMan.getRepository(options);
   }
 

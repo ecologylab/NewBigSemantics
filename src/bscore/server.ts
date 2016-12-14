@@ -1,4 +1,6 @@
-// Entry point for BigSemanticsService
+/**
+ * Entry point for BigSemanticsService.
+ */
 
 import * as fs from 'fs';
 import * as http from 'http';
@@ -34,12 +36,11 @@ if(conf.proxy_url == "dpool") {
 }
 
 var bsRouter = express.Router();
-bsservice.create((err, res) => {
-  if (err) {
-    console.error(err);
-    return;
-  }
-
+bsservice.create({
+  appId: 'bigsemantics-service',
+  appVer: '3.0.2',
+  serviceBase: conf.repoSource.url as string,
+}).then(res => {
   bsRouter.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
@@ -66,7 +67,9 @@ bsservice.create((err, res) => {
   bsRouter.use("/downloaders.json", res.downloadersInfoJson);
 
   bsRouter.use(res.errorHandler);
-}, conf);
+}, conf).catch(err => {
+  console.error(err);
+});
 
 var app = express();
 app.use(compression())

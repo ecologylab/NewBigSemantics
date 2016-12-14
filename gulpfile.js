@@ -1,20 +1,43 @@
 // Build new BigSemantics
 
+var cp = require('child_process');
+var argv = require('yargs').argv;
 var gulp = require('gulp');
-var gutil = require('gulp-util');
 var ts = require('gulp-typescript');
-var jasmine = require('gulp-jasmine');
+var rename = require('gulp-rename');
 var del = require('del');
+var jasmine = require('gulp-jasmine');
 
-var bsTsProject = ts.createProject('BigSemanticsJavaScript/tsconfig.json');
-var tsProject = ts.createProject('fake-tsconfig.json');
+var env = argv.env || 'dev';
+var isDev = env === 'dev';
+console.log("Environment (specify with --env when calling gulp): " + env);
 
-gulp.task('compile-bigsemantics', function() {
-  return bsTsProject.src().pipe(bsTsProject()).js.pipe(gulp.dest('build'));
+gulp.task('compile-bigsemantics-core', function(callback) {
+  var cmd = 'gulp --env=' + env;
+  cp.exec(cmd, {
+    cwd: './BigSemanticsJavaScript',
+  }, function (err) {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback();
+  });
 });
 
-gulp.task('compile', function() {
-  return tsProject.src().pipe(tsProject()).js.pipe(gulp.dest('build'));
+gulp.task('copy-bigsemantics-core', [ 'compile-bigsemantics-core' ], function() {
+  gulp.src('./BigSemanticsJavaScript/build/**/*').pipe(gulp.dest('./build'));
+});
+
+gulp.task('compile', [ 'copy-bigsemantics-core' ], function() {
+  var tsProject = ts.createProject('tsconfig.json');
+  return gulp.src('src/**/*.ts', { base: 'src' }).pipe(tsProject({
+    rootDir: '.',
+  })).js.pipe(rename(function(path) {
+    if (path.dirname.substr(0, 4) === 'src/') {
+      path.dirname = path.dirname.substr(4);
+    }
+  })).pipe(gulp.dest('build'));
 });
 
 gulp.task('copy-files', function() {
@@ -23,15 +46,15 @@ gulp.task('copy-files', function() {
     "src/phantom/static/*",
     "src/phantom/*.js",
     "src/bscore/test/*.html",
-    "src/dashboard/**/*"
+    "src/dashboard/**/*.tsx"
   ];
   return gulp.src(files, { base: 'src' }).pipe(gulp.dest('build'));
 });
 
-gulp.task('default', [ 'compile-bigsemantics', 'compile', 'copy-files' ]);
+gulp.task('default', [ 'compile', 'copy-files' ]);
 
 gulp.task('clean', function() {
-  del.sync(['build']);
+  del.sync([ 'build', 'BigSemanticsJavaScript/build' ]);
 });
 
 gulp.task('testExtractor', function() {
