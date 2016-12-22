@@ -1,0 +1,16 @@
+{
+  master_port: 9088,
+  number_of_initial_agents: 1,
+
+  default_ignored_suffixes: [
+    'jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga',
+    'css',
+  ],
+
+  proxy_service: {
+    endpoint: 'http://localhost:3000/proxy',
+    default_blacklist: [
+      'ecologylab.net',
+    ],
+  }
+}

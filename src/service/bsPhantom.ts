@@ -6,40 +6,38 @@ import * as path from 'path';
 import * as Promise from 'bluebird';
 import * as simpl from 'simpl.js';
 import ParsedURL from '../core/ParsedURL';
-import Readyable from '../core/Readyable';
 import {
   MetaMetadata,
   BuildInfo,
   Repository,
+  TypedRepository,
   TypedMetadata,
   BSResult,
 } from '../core/types';
-import RepoMan, { RepoOptions } from '../core/RepoMan';
+import { RepoOptions, RepoMan } from '../core/RepoMan';
+import { RepoLoader, create } from '../core/RepoLoader';
+import { Downloader } from '../core/Downloader';
 import {
   BigSemantics,
   BigSemanticsOptions,
-  BigSemanticsCallOptions
+  BigSemanticsCallOptions,
 } from '../core/BigSemantics';
-import ServiceRepoLoader from '../downloaders/ServiceRepoLoader';
-import BSDefault from '../api/BSDefault';
 import { AbstractBigSemantics } from '../api/AbstractBigSemantics';
-import { Downloader } from '../core/Downloader';
-import RequestDownloader from './request-downloader';
-import { Task } from './task';
+import BSDefault from '../api/BSDefault';
+import * as config from '../utils/config';
+import { ServiceOptions } from './options';
+import logger from './logging';
+import RequestDownloader from './requestDownloader';
+import Task from './task';
 import * as pm from '../phantom/master';
 
 /**
  * Files to inject for extraction
  * @type {string[]}
  */
-let bsjsFiles = [
+const bsjsFiles = [
   path.join(__dirname, '../bigsemantics-core.bundle.js'),
 ];
-
-/**
- * @type {string[]}
- */
-export const ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga', 'css'];
 
 /**
  *
@@ -47,13 +45,15 @@ export const ignoreSuffixes = ['jpg', 'jpeg', 'tiff', 'gif', 'bmp', 'png', 'tga'
 export interface BSPhantomOptions extends BigSemanticsOptions {
   appId: string;
   appVer: string;
-  serviceBase: string | ParsedURL;
+
+  repository?: Repository | TypedRepository;
+  repositoryUrl?: string | ParsedURL;
+  serviceBase?: string | ParsedURL;
+
   repoOptions?: RepoOptions;
-  cacheRepoFor?: string; // e.g. 30d, 20h, 30m, 5d12h30m
+  cacheRepoFor?: string;
+  disableRepoCaching?: boolean;
   requesterFactory?: ()=>Downloader;
-  ignoreSuffixes?: string[];
-  proxy_url?: string;
-  proxy_blacklist?: string[];
 }
 
 /**
@@ -61,24 +61,27 @@ export interface BSPhantomOptions extends BigSemanticsOptions {
  */
 export interface BSPhantomCallOptions extends BigSemanticsCallOptions {
   task?: Task;
-  ignoreSuffixes?: string[];
-  proxy_url?: string;
-  proxy_blacklist?: string[];
+
+  ignoredSuffixes?: string[];
+  proxy?: {
+    endpoint: string;
+    blacklist?: string[];
+    whitelist?: string[];
+  };
 }
 
 /**
- *
+ * Injected script can use this to talk back to the PhantomJS control page.
  */
 declare var respond: (err: Error, metadata?: TypedMetadata)=>void;
 
 /**
  *
  */
-export default class BSPhantom extends AbstractBigSemantics {
+export class BSPhantom extends AbstractBigSemantics {
   private options: BSPhantomOptions;
-  private serviceRepoLoader: ServiceRepoLoader;
+  private repoLoader: RepoLoader;
   private repoMan: RepoMan;
-  private serializedRepo: string;
   private master: pm.Master;
 
   /**
@@ -90,18 +93,15 @@ export default class BSPhantom extends AbstractBigSemantics {
     this.reset();
 
     this.options = options;
-    if (!this.options.ignoreSuffixes) {
-      this.options.ignoreSuffixes = ignoreSuffixes;
-    }
 
-    this.serviceRepoLoader = new ServiceRepoLoader();
     if (!this.options.requesterFactory) {
       this.options.requesterFactory = () => {
         return new RequestDownloader();
       };
     }
-    this.serviceRepoLoader.load(options);
-    this.serviceRepoLoader.getRepoMan().then(repoMan => {
+
+    this.repoLoader = create(this.options);
+    this.repoLoader.getRepoMan().then(repoMan => {
       this.repoMan = repoMan;
       this.repoMan.onReadyP().then(() => {
         if (!this.master) {
@@ -120,13 +120,6 @@ export default class BSPhantom extends AbstractBigSemantics {
     return this.master;
   }
 
-  private getSerializedRepository(): Promise<string> {
-    if (this.serializedRepo) {
-      return Promise.resolve(this.serializedRepo);
-    }
-    return this.getRepository().then(repo => simpl.serialize(repo));
-  }
-
   loadMetadata(location: string | ParsedURL, options?: BSPhantomCallOptions): Promise<BSResult> {
     return new Promise((resolve, reject) => {
       let purl = ParsedURL.get(location);
@@ -137,31 +130,14 @@ export default class BSPhantom extends AbstractBigSemantics {
       let task: Task = options.task;
 
       return this.getSerializedRepository().then(serializedRepo => {
-        let tasks = []; // FIXME what does this list do?
+        page.onConsole(msg => {
+          console.log("Console: " + msg);
+        }).onError((err, trace) => {
+          console.log("Error: " + err);
+          task.log("Console Error", { err: err, trace: trace });
+        });
 
-        let ignoreSuffixes = options.ignoreSuffixes || this.options.ignoreSuffixes;
-        page.setIgnoredSuffixes(ignoreSuffixes)
-            .onConsole(msg => console.log("Console: " + msg))
-            .onError((err, trace) => {
-              console.log("Error: " + err);
-              task.log("Console Error", { err: err, trace: trace });
-            })
-            .onTask(task => tasks.push(task));
-
-        let proxyUrl = options.proxy_url || this.options.proxy_url;
-        if (proxyUrl) {
-          if (task) {
-            task.log("Using Proxy", proxyUrl);
-          }
-          page.setProxy(proxyUrl);
-        }
-
-        let proxyBlacklist = options.proxy_blacklist || this.options.proxy_blacklist;
-        if (proxyBlacklist) {
-          page.setProxyBlacklist(proxyBlacklist);
-        }
-
-        page.open(purl.toString())
+        page.open(purl.toString(), null, options)
             .injectJs(bsjsFiles)
             .evaluateAsync(function(serializedRepo) {
               var options = {
@@ -186,10 +162,6 @@ export default class BSPhantom extends AbstractBigSemantics {
                 respond(err);
               });
             }, serializedRepo)
-            .then((result: TypedMetadata) => {
-              result['dpoolTasks'] = tasks;
-              resolve(result);
-            })
             .close()
             .catch(err => {
               reject(err);
@@ -204,6 +176,10 @@ export default class BSPhantom extends AbstractBigSemantics {
 
   getRepository(options?: BSPhantomCallOptions): Promise<Repository> {
     return this.repoMan.getRepository(options);
+  }
+
+  getSerializedRepository(options?: BSPhantomCallOptions): Promise<string> {
+    return this.repoMan.getSerializedRepository(options);
   }
 
   getUserAgentString(userAgentName: string, options?: BSPhantomCallOptions): Promise<string> {
@@ -226,3 +202,5 @@ export default class BSPhantom extends AbstractBigSemantics {
     return this.repoMan.normalizeLocation(location, options);
   }
 }
+
+export default BSPhantom;

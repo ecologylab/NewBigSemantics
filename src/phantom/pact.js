@@ -24,10 +24,10 @@ var controlPage = webpage.create();
 var globalMethods = {}, pageMethods = {};
 
 // map of page -> ignored suffixes
-var ignoredSuffixes = {};
+var ignoredSuffixesMap = {};
 
 // map of filter urls -> callbacks
-var filterCallbacks = {};
+var filterCallbacksMap = {};
 
 // set up callback
 controlPage.onCallback = function(msg) {
@@ -118,8 +118,24 @@ globalMethods.createPage = function(msg) {
     var pageId = msg.params.pageId;
     var page = webpage.create();
 
+    var options = msg.params.options || {};
+    if (!options.proxy) options.proxy = {};
+
+    if (options.proxy && options.proxy.endpoint) {
+      page.proxy = options.proxy.endpoint;
+    }
+    if (options.ignoredSuffixes) {
+      page.ignoredSuffixes = options.ignoredSuffixes;
+    }
+    if (options.blacklist) {
+      page.proxyBlacklist = options.blacklist;
+    }
+    if (options.whitelist) {
+      page.proxyWhitelist = options.whitelist;
+    }
+
     page.onCallback = function(msg) {
-      if(msg.specialType) {
+      if (msg.specialType) {
         switch(msg.specialType) {
           case "resp":
             respond(msg.id, msg.err, msg.result);
@@ -131,35 +147,35 @@ globalMethods.createPage = function(msg) {
     page.onResourceRequested = function(requestData, networkRequest) {
       var url = requestData.url;
 
-      if(page.ignoredSuffixes) {
+      if (page.ignoredSuffixes) {
         var ext = url.split('?')[0].split('.').pop();
-        if(page.ignoredSuffixes.indexOf(ext) != -1) {
+        if (page.ignoredSuffixes.indexOf(ext) != -1) {
           networkRequest.abort();
           return;
         }
       }
 
-      if(page.proxy && url.indexOf("file://") === -1 && url.indexOf("data:") !== 0) {
+      if (page.proxy && url.indexOf("file://") !== 0 && url.indexOf("data:") !== 0) {
         var redirect = true;
 
-        if(page.proxyBlacklist) {
-          for(var i in page.proxyBlacklist) {
-            if(url.indexOf(page.proxyBlacklist[i]) !== -1) {
+        if (page.proxyBlacklist) {
+          for (var i in page.proxyBlacklist) {
+            if (url.indexOf(page.proxyBlacklist[i]) !== -1) {
               redirect = false;
+              break;
             }
           }
-        } else if(page.proxyWhitelist) {
+        } else if (page.proxyWhitelist) {
           redirect = false;
-
-          for(var i in page.proxyWhitelist) {
-            if(url.indexOf(page.proxyWhitelist[i]) !== -1) {
+          for (var i in page.proxyWhitelist) {
+            if (url.indexOf(page.proxyWhitelist[i]) !== -1) {
               redirect = true;
             }
           }
         }
 
-        if(redirect) {
-          var newUrl = page.proxy + encodeURIComponent(url);
+        if (redirect) {
+          var newUrl = page.proxy + '?url=' + encodeURIComponent(url);
           networkRequest.changeUrl(newUrl);
         }
       }
@@ -177,16 +193,17 @@ globalMethods.createPage = function(msg) {
       }
     }
 
-    // TODO this should be dynamically turned on / off too.
-    /*
-    page.onResourceError = function(resourceError) {
-      console.log("resource error: " + JSON.stringify(resourceError, null, 4));
+    if (options.logResourceError) {
+      page.onResourceError = function(resourceError) {
+        console.warn("resource error: " + JSON.stringify(resourceError, null, 4));
+      }
     }
 
-    page.onResourceTimeout = function(request) {
-      console.log("resource timeout: " + JSON.stringify(request, null, 4));
+    if (options.logResourceTimeout) {
+      page.onResourceTimeout = function(request) {
+        console.warn("resource timeout: " + JSON.stringify(request, null, 4));
+      }
     }
-    */
 
     page.onConsoleMessage = function(msg, lineNum, sourceId) {
       sendMsg(pageId, 'console', msg);
@@ -205,6 +222,22 @@ globalMethods.createPage = function(msg) {
 
 pageMethods.open = function(page, msg) {
   if (assertParams(msg, 'url')) {
+    if (msg.params.options) {
+      if (msg.params.options.ignoredSuffixes) {
+        page.ignoredSuffixes = ignoredSuffixes;
+      }
+      if (msg.params.options.proxy) {
+        if (msg.params.options.proxy.endpoint) {
+          page.proxy = msg.params.options.proxy.endpoint;
+          if (msg.params.options.proxy.blacklist) {
+            page.proxyBlacklist = msg.params.options.proxy.blacklist;
+          }
+          if (msg.params.options.proxy.whitelist) {
+            page.proxyWhitelist = msg.params.options.proxy.whitelist;
+          }
+        }
+      }
+    }
     page.open(msg.params.url, msg.params.settings, function(status) {
       respond(msg.id);
     });
@@ -217,25 +250,38 @@ pageMethods.setIgnoredSuffixes = function(page, msg) {
 }
 
 pageMethods.setProxy = function(page, msg) {
-  page.proxy = msg.params.proxyURL;
-
+  page.proxy = msg.params.proxyEndpoint;
   respond(msg.id);
 }
 
 pageMethods.setProxyBlacklist = function(page, msg) {
   page.proxyBlacklist = msg.params.patterns;
-
   respond(msg.id);
 }
 
 pageMethods.setProxyWhitelist = function(page, msg) {
   page.proxyWhitelist = msg.params.patterns;
-
   respond(msg.id);
 }
 
 pageMethods.setContent = function(page, msg) {
   if (assertParams(msg, 'content', 'url')) {
+    if (msg.params.options) {
+      if (msg.params.options.ignoredSuffixes) {
+        page.ignoredSuffixes = ignoredSuffixes;
+      }
+      if (msg.params.options.proxy) {
+        if (msg.params.options.proxy.endpoint) {
+          page.proxy = msg.params.options.proxy.endpoint;
+          if (msg.params.options.proxy.blacklist) {
+            page.proxyBlacklist = msg.params.options.proxy.blacklist;
+          }
+          if (msg.params.options.proxy.whitelist) {
+            page.proxyWhitelist = msg.params.options.proxy.whitelist;
+          }
+        }
+      }
+    }
     page.setContent(msg.params.content, msg.params.url);
     respond(msg.id);
   }

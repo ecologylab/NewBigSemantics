@@ -4,62 +4,93 @@
 
 import * as express from 'express';
 import * as fs from 'fs';
+import * as Promise from 'bluebird';
 import * as xml from 'xml';
-import DownloaderPool from './dpool';
 import logger from './logging';
+import { TaskProto } from './taskMan';
+import DownloaderPool from './dpool';
 
-interface Request extends express.Request {
+/**
+ *
+ */
+export interface Request extends express.Request {
   dpool: {
-    task?: any;
+    task: TaskProto;
   };
 }
 
+/**
+ *
+ */
 export interface Middleware {
   (req: Request, resp: express.Response, next: express.NextFunction): void;
 }
 
-interface MiddlewareFactory {
-  (any): Middleware;
-}
-
+/**
+ *
+ */
 export interface MiddlewareSet {
-  validateParams: Middleware;
   download: Middleware;
   proxy: Middleware;
   workers: Middleware;
-  get: Middleware;          // deprecated
-  downloadJson: Middleware; // deprecated
-  downloadXml: Middleware;  // deprecated
+
+  /**
+   * @deprecated
+   */
+  echo?: Middleware;
+
+  /**
+   * @deprecated
+   */
+  downloadJson?: Middleware;
+
+  /**
+   * @deprecated
+   */
+  downloadXml?: Middleware;
 }
 
-var validateParams: Middleware = function(req, resp, next) {
-  if (!req.query.url || req.query.url === '') {
-    next(new Error("Parameter 'url' is required."));
-    return;
-  }
-
-  req.dpool = req.dpool || {};
-  req.dpool.task = {
-    url: req.query.url,
-    userAgent: req.query.agent,
+/**
+ * @param {Request} req
+ */
+function preprocessRequest(req: Request): void {
+  req.dpool = req.dpool || {
+    task: {
+      url: req.query.url || req.query.uri,
+    },
   };
+  if (req.query.agent) {
+    req.dpool.task.userAgent = req.query.agent;
+  }
   if (req.query.attempts) {
     req.dpool.task.maxAttempts = Number(req.query.attempts);
   }
   if (req.query.timeout) {
-    req.dpool.task.msPerAttempts = Number(req.query.timeout);
+    req.dpool.task.timePerAttempt = Number(req.query.timeout);
   }
-  next();
 }
 
-var downloadFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
-  var result: Middleware = function(req, resp, next) {
-    dpool.newTask(req.dpool.task, (err, task) => {
-      if (err) {
-        next(err);
-        return;
-      }
+/**
+ * @param {Error} err
+ * @param {NextFunction} next
+ */
+function logError(err: Error, next: express.NextFunction): void {
+  logger.warn(err);
+  next(err);
+}
 
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ */
+function downloadFactory(dpool: DownloaderPool): Middleware {
+  return function(req, resp, next) {
+    if (!req.query.url && !req.query.uri) {
+      throw new Error("Missing required query 'url'");
+    }
+    preprocessRequest(req);
+    let task = dpool.newTask(req.dpool.task);
+    task.on('finish', () => {
       if (task.response) {
         if (task.response.raw) {
           task.response.content = task.response.raw.toString();
@@ -67,54 +98,94 @@ var downloadFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
         }
       }
       resp.json(task);
-      resp.end();
+    });
+    task.on('error', err => {
+      logError(err, next);
+    });
+    task.on('terminated', () => {
+      logError(new Error("Task is terminated due to too many errors"), next);
     });
   };
-  return result;
 }
 
-var proxyFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
-  var result: Middleware = function(req, resp, next) {
-    dpool.newTask(req.dpool.task, (err, task) => {
-      if (task && task.response) {
-        resp.status(task.response.code);
-        task.response.headers.forEach(hdr => {
-          resp.set(hdr.name, hdr.value);
-        });
-        resp.end(task.response.raw);
-      } else {
-        resp.status(500);
-        resp.send(task);
-        return resp.end();
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ */
+function proxyFactory(dpool: DownloaderPool): Middleware {
+  return function(req, resp, next) {
+    if (!req.query.url && !req.query.uri) {
+      throw new Error("Missing required query 'url'");
+    }
+    preprocessRequest(req);
+    let task = dpool.newTask(req.dpool.task);
+    task.on('finish', () => {
+      if (!task.response) {
+        throw new Error("Response missing!");
       }
+
+      resp.status(task.response.code);
+      task.response.headers.forEach(hdr => {
+        resp.set(hdr.name, hdr.value);
+      });
+      resp.send(task.response.raw);
+    });
+    task.on('error', err => {
+      logError(err, next);
+    });
+    task.on('terminated', () => {
+      logError(new Error("Task is terminated due to too many errors"), next);
     });
   };
-  return result;
 }
 
-// Deprecated. For backward compatibility only.
-var get: Middleware = function(req, resp, next) {
-  var msg = req.query.msg;
-  resp.send('Echo Message: ' + msg);
-  resp.end();
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ */
+function workersFactory(dpool: DownloaderPool): Middleware {
+  return function(req, resp, next) {
+    resp.json(dpool.getWorkers());
+  };
 }
 
-// Deprecated. For backward compatibility only.
-var downloadJsonFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
-  var result: Middleware = function(req, resp, next) {
-    dpool.newTask(req.dpool.task, (err, task) => {
-      if (err) {
-        resp.status(500);
-        resp.json(task);
-        resp.end();
-        return;
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ * @deprecated
+ */
+function echoFactory(): Middleware {
+  return function(req, resp, next) {
+    if (!req.query.msg) {
+      throw new Error("Missing required query 'msg'");
+    }
+    var msg = req.query.msg;
+    resp.send('Echo Message: ' + msg);
+  };
+}
+
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ * @deprecated
+ */
+function downloadJsonFactory(dpool: DownloaderPool): Middleware {
+  return function(req, resp, next) {
+    if (!req.query.url && !req.query.uri) {
+      throw new Error("Missing required query 'url'");
+    }
+    preprocessRequest(req);
+    let task = dpool.newTask(req.dpool.task);
+    task.on('finish', () => {
+      if (!task.response) {
+        throw new Error("Response missing!");
       }
 
-      // generate JSON response
       if (task.response.raw) {
         task.response.content = task.response.raw.toString();
         delete task.response.raw;
       }
+
       resp.type('json');
       resp.send({
         download_task: {
@@ -122,14 +193,14 @@ var downloadJsonFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
           state: task.state === 'finished' ? 'SUCCEEDED' : 'TERMINATED',
           user_agent: task.userAgent,
           max_attempts: task.maxAttempts,
-          attempt_time: task.msPerAttempt,
+          attempt_time: task.timePerAttempt,
 
           url: req.query.url,
 
           response: {
-            url: task.response.url,
+            url: task.response.location,
             code: task.response.code,
-            other_urls: (task.response.otherUrls || []).map(otherUrl => {
+            other_urls: (task.response.otherLocations || []).map(otherUrl => {
               return {
                 other_url: otherUrl,
               };
@@ -140,42 +211,42 @@ var downloadJsonFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
                 value: hdr.value,
               };
             }),
-            content: task.response.content,
-          }, // response
-
-          // we have to skip logs for now, to not break JSON deserializer in Java.
-          /*
-          logs: (!task.logs) ? [] : task.logs.map(log => {
-            return {
-              datetime: log.datetime,
-              name: log.name,
-              args: JSON.stringify(log.args),
-            };
-          }),
-          */
-        }, // download_task
-      }); // resp.send()
-      resp.end();
-    }); // dpool.newTask() callback
+            content: task.response['content'],
+          },
+        },
+      });
+    });
+    task.on('error', err => {
+      logError(err, next);
+    });
+    task.on('terminated', () => {
+      logError(new Error("Task is terminated due to too many errors"), next);
+    });
   };
-  return result;
 }
 
-var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
-  var result: Middleware = function(req, resp, next) {
-    dpool.newTask(req.dpool.task, (err, task) => {
-      if (err) {
-        resp.status(500);
-        resp.json(task);
-        resp.end();
-        return;
+/**
+ * @param {DownloaderPool} dpool
+ * @return {Middleware}
+ * @deprecated
+ */
+function downloadXmlFactory(dpool: DownloaderPool): Middleware {
+  return function(req, resp, next) {
+    if (!req.query.url && !req.query.uri) {
+      throw new Error("Missing required query 'url'");
+    }
+    preprocessRequest(req);
+    let task = dpool.newTask(req.dpool.task);
+    task.on('finish', () => {
+      if (!task.response) {
+        throw new Error("Response missing!");
       }
 
-      // generate XML response
       if (task.response.raw) {
         task.response.content = task.response.raw.toString();
         delete task.response.raw;
       }
+
       resp.type('xml');
       resp.send(xml({
         download_task: [
@@ -185,7 +256,7 @@ var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
               state: task.state === 'finished' ? 'SUCCEEDED' : 'TERMINATED',
               user_agent: task.userAgent,
               max_attempts: task.maxAttempts,
-              attempt_time: task.msPerAttempt,
+              attempt_time: task.timePerAttempt,
             },
           },
           {
@@ -195,12 +266,12 @@ var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
             response: [
               {
                 _attr: {
-                  url: task.response.url,
+                  url: task.response.location,
                   code: task.response.code,
                 },
               },
-              (!task.response.otherUrls) ? {} : {
-                other_urls: task.response.otherUrls.map(otherUrl => {
+              (!task.response.otherLocations) ? {} : {
+                other_urls: task.response.otherLocations.map(otherUrl => {
                   return {
                     other_url: otherUrl,
                   };
@@ -219,55 +290,38 @@ var downloadXmlFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
                 }),
               },
               {
-                content: task.response.content,
+                content: task.response['content'],
               }
             ],
           },
-          (!task.logs) ? {} : {
-            logs: task.logs.map(log => {
-              return {
-                log: [
-                  { datetime: log.datetime },
-                  { name: log.name },
-                  { args: JSON.stringify(log.args) },
-                ],
-              };
-            }),
-          },
         ],
       }));
-      resp.end();
+    });
+    task.on('error', err => {
+      logError(err, next);
+    });
+    task.on('terminated', () => {
+      logError(new Error("Task is terminated due to too many errors"), next);
     });
   };
-  return result;
 }
 
-var workersFactory: MiddlewareFactory = function(dpool: DownloaderPool) {
-  var result: Middleware = function(req, resp, next) {
-    resp.end(JSON.stringify(dpool.getWorkers()));
-  };
-
-  return result;
-}
-
-export function create(callback: (err: Error, result: MiddlewareSet)=>void): void {
-  DownloaderPool.create((err, dpool) => {
-    if (err) {
-      logger.error(err, 'Error creating dpool middleware set');
-      callback(err, null);
-      return;
-    }
-
-    var result: MiddlewareSet = {
-      validateParams: validateParams,
+/**
+ * @return {Promise<MiddlewareSet>}
+ */
+export default function create(): Promise<MiddlewareSet> {
+  return DownloaderPool.create().then(dpool => {
+    dpool.start();
+    return {
       download: downloadFactory(dpool),
       proxy: proxyFactory(dpool),
       workers: workersFactory(dpool),
-      get: get,
+      echo: echoFactory(),
       downloadJson: downloadJsonFactory(dpool),
       downloadXml: downloadXmlFactory(dpool),
-    }
-    dpool.start();
-    callback(null, result);
+    };
+  }).catch(err => {
+    logger.error(err, 'Error creating dpool middleware set');
+    throw err; // for chained catch()
   });
 }

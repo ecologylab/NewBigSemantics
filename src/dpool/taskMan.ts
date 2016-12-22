@@ -1,20 +1,65 @@
 // Task manager.
 
+import * as events from 'events';
 import * as LRU from 'lru-cache';
-import { Task, Log } from './types';
 import { base32enc, sha256 } from '../utils/codec';
+import * as logging from '../utils/logging';
+import * as config from '../utils/config';
+import { DPoolOptions } from './options';
 import logger from './logging';
-import { taskLog } from './logging';
+import { HttpResponse } from './httpRespParser';
 
+let dpoolOptions = config.getOrThrow('dpool') as DPoolOptions;
+
+/**
+ *
+ */
+export interface TaskProto {
+  url: string;
+  userAgent?: string;
+  maxAttempts?: number;
+  timePerAttempt?: number;
+}
+
+/**
+ * A DPool task.
+ */
+export class Task extends logging.Task implements TaskProto {
+  id: string;
+
+  url: string;
+  userAgent?: string;
+  timePerAttempt?: number;
+  maxAttempts?: number;
+
+  /**
+   * states:
+   * - ready: ready to be dispatched to a worker.
+   * - dispatched: dispatched to a worker; ongoing.
+   * - finished: successfully done, and reported.
+   * - terminated: unsuccessfully stopped after attempt(s), and reported.
+   */
+  state?: 'ready' | 'dispatched' | 'finished' | 'terminated';
+  attempts?: number;
+  response?: HttpResponse;
+
+  constructor(proto: TaskProto) {
+    super();
+    this.url = proto.url;
+    this.id = base32enc(sha256(Date.now() + '|' + proto.url)).substr(0, 10);
+
+    this.userAgent = proto.userAgent || dpoolOptions.user_agent;
+    this.maxAttempts = proto.maxAttempts || dpoolOptions.max_attempts,
+    this.timePerAttempt = proto.timePerAttempt || dpoolOptions.time_per_attempt,
+
+    this.state = 'ready';
+  }
+}
+
+/**
+ * Task manager.
+ */
 export default class TaskMan {
-
-  private static defaultCacheSize = 10000;
-
-  private static defaultUserAgent = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36';
-
-  private static defaultMaxAttempts = 3;
-
-  private static defaultMsPerAttempt = 15000;
 
   private done: LRU.Cache<Task>;
 
@@ -22,43 +67,39 @@ export default class TaskMan {
 
   constructor() {
     this.done = LRU<Task>({
-      max: TaskMan.defaultCacheSize,
+      max: dpoolOptions.cache_size,
     });
     this.tasks = [];
   }
 
-  newTask(task: any, callback: (error: Error, result: any)=>void): void {
-    var t: Task = {
-      id: base32enc(sha256(Date.now() + '|' + task.url)).substr(0, 10),
-      url: task.url,
-      userAgent: task.userAgent || TaskMan.defaultUserAgent,
-      maxAttempts: task.maxAttempts || TaskMan.defaultMaxAttempts,
-      msPerAttempt: task.msPerAttempt || TaskMan.defaultMsPerAttempt,
-    };
-    t.state = 'ready';
-    t.callback = callback;
-    this.tasks.push(t);
-    taskLog(t, 'queued');
-    logger.info({ url: t.url, id: t.id, }, 'task queued');
+  newTask(proto: TaskProto): Task {
+    var task: Task = new Task(proto);
+    this.tasks.push(task);
+    task.log('queued');
+    logger.info({ url: task.url, id: task.id, }, 'task queued');
+    return task;
   }
 
   redispatch(task: Task): void {
     task.state = 'ready';
     this.tasks.unshift(task);
-    taskLog(task, 'requeued');
+    task.log('requeued');
     logger.info({ url: task.url, id: task.id }, 'task requeued');
   }
 
-  // goes through all tasks in order, until a dispatchable task is found.
-  //
-  // finished / terminated tasks will be moved to this.done.
-  //
-  // tasks that are already dispatched, or not dispatchable right now will be
-  // skipped.
-  //
-  // - callback: test if a task is dispatchable and actually dispatch it.
-  //
-  // returns true if such a task was found and dispatched.
+  /**
+   * Goes through all tasks in order, until a dispatchable task is found.
+   * Finished / terminated tasks will be moved to this.done.
+   * Tasks that are already dispatched, or not dispatchable right now will be
+   * skipped.
+   *
+   * @param {Task=>boolean} callback
+   *   A function that takes a Task, returns if the task is dispatchable, and
+   *   dispatches the task if it is dispatchable.
+   *
+   * @return {boolean}
+   *   True iff such a task was found and dispatched.
+   */
   findAndDispatch(callback: (task: Task)=>boolean): boolean {
     var buf = [];
 

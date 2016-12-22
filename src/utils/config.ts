@@ -39,7 +39,7 @@
 // Usage:
 //
 // import * as config from 'config';
-// var conf = config.get('my-component');
+// let conf = config.get('my-component');
 // console.log("merged configuration, as an object: ", conf);
 
 import * as fs from 'fs';
@@ -47,12 +47,22 @@ import * as os from 'os';
 import * as path from 'path';
 import * as JSON5 from 'json5';
 
-function search(initDir: string, fileName: string): { file: string, dir: string } {
-  var dir = path.resolve(initDir);
+interface SearchResult {
+  file: string;
+  dir: string;
+}
+
+/**
+ * @param {string} initDir
+ * @param {string} fileName
+ * @return {SearchResult}
+ */
+function search(initDir: string, fileName: string): SearchResult {
+  let dir = path.resolve(initDir);
 
   while (dir != '/') {
-    var configDir = path.join(dir, 'config');
-    var configFile = path.join(configDir, fileName);
+    let configDir = path.join(dir, 'config');
+    let configFile = path.join(configDir, fileName);
     if (fs.existsSync(configFile)) {
       return {
         file: configFile,
@@ -65,49 +75,92 @@ function search(initDir: string, fileName: string): { file: string, dir: string 
   return null;
 }
 
-function mergeInto(dest: Object, src: Object): void {
-  if (dest && src) {
-    for (var key in src) {
-      var vsrc = src[key];
-      var vdest = dest[key];
-      if (vsrc) {
-        if (vdest) {
-          if (typeof vdest === 'object' && !(vdest instanceof Array)
-              && typeof vsrc === 'object' && !(vsrc instanceof Array)) {
-            mergeInto(vdest, vsrc);
-            continue;
-          }
-        }
-        dest[key] = vsrc;
-      }
-    }
-  }
+interface MapKey {
+  (origKey: string): string;
 }
 
-var cached = {};
+/**
+ * Merge src[key] into dest[destKey], where
+ *     destKey = mapKey ? mapKey(key) : key.
+ *
+ * Special cases:
+ * - If src or src[key] doesn't exist, do nothing.
+ * - If dest doesn't exist but src[key] exists, create a new Object and return
+ *   as the new dest.
+ * - If src[key] and dest[destKey] both exist and are Arrays, concatenate them
+ *   into one Array.
+ * - If src[key] and dest[destKey] both exist and are Objects, recursively merge
+ *   them.
+ *
+ * @param {Object} dest
+ * @param {Object} src
+ * @param {string} key
+ * @param {MapKey} mapKey
+ * @returns {Object}
+ */
+export function mergeFieldInto(dest: Object, src: Object, key: string, mapKey?: MapKey): typeof dest {
+  let vsrc = src ? src[key] : undefined;
+  let destKey = mapKey ? mapKey(key) : key;
+  if (destKey) {
+    let vdest = dest ? dest[destKey] : undefined;
+    if (vsrc) {
+      if (!dest) dest = {};
+      if (vdest) {
+        if (vdest instanceof Array && vsrc instanceof Array) {
+          Array.prototype.push.apply(vdest, vsrc);
+        } else if (vdest instanceof Object && vsrc instanceof Object) {
+          mergeInto(vdest, vsrc, mapKey);
+        }
+        return dest;
+      }
+      dest[destKey] = vsrc;
+    }
+  }
+  return dest;
+}
 
+/**
+ * @param {Object} dest
+ * @param {Object} src
+ * @returns {Object}
+ */
+export function mergeInto(dest: Object, src: Object, mapKey?: MapKey): Object {
+  if (src) {
+    for (let key in src) {
+      dest = mergeFieldInto(dest, src, key, mapKey);
+    }
+  }
+  return dest;
+}
+
+let cached = {};
+
+/**
+ * @param {string} componentName without extension
+ * @return {Object|Error}
+ */
 export function get(componentName: string): Object | Error {
   if (componentName in cached) return cached[componentName];
 
-  var defaultConfigFileName = componentName + '-default.json5';
-  var configFileName = componentName + '.json5';
+  let defaultConfigFileName = componentName + '-default.json5';
+  let configFileName = componentName + '.json5';
 
-  var config = {};
+  let config = {};
 
-  var result = search(__dirname, defaultConfigFileName);
+  let result = search(__dirname, defaultConfigFileName);
   if (result instanceof Error) return result;
   if (result == null) return new Error("Configuration not found for " + componentName);
-  var file = result.file;
-  var dir = result.dir;
+  let file = result.file;
+  let dir = result.dir;
 
   while (true) {
-    var obj = {};
+    let obj = {};
     try {
       obj = JSON5.parse(fs.readFileSync(file).toString());
     } catch (err) {
       return new Error("Failed to parse " + file);
     }
-    mergeInto(config, obj);
+    config = mergeInto(config, obj);
 
     result = search(path.dirname(dir), componentName + '.json5');
     if (result === null) break;
@@ -117,4 +170,34 @@ export function get(componentName: string): Object | Error {
 
   cached[componentName] = config;
   return config;
+}
+
+/**
+ * @param {string} componentName without extension
+ * @return {Object}
+ */
+export function getOrThrow(componentName: string): Object {
+  let conf = get(componentName);
+  if (!conf) throw new Error("Error loading configs for " + componentName);
+  if (conf instanceof Error) throw conf as Error;
+  return conf;
+}
+
+interface Logger {
+  fatal(error: Error, format?: any, ...params: any[]);
+}
+
+/**
+ * @param {string} componentName without extension
+ * @return {Object}
+ */
+export function getOrFail(componentName: string, logger?: Logger): Object {
+  try {
+    return getOrThrow(componentName);
+  } catch (err) {
+    if (logger) {
+      logger.fatal(err, "Error loading configs for " + componentName);
+    }
+    throw err;
+  }
 }

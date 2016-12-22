@@ -1,9 +1,0 @@
-{
-  endpoint: "localhost",
-  port: 10001,
-  minio_port: 10000,
-  minio_secure_port: 10002,
-  secure: false,
-  // accessKey: '<your accessKey>',
-  // secretKey: '<your secretKey>',
-}

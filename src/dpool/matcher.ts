@@ -1,16 +1,26 @@
 // Matches a downloader (as a worker) and a task, based on access time.
 
-import ParsedURL from '../../BigSemanticsJavaScript/bsjsCore/ParsedURL';
-import { Task, Worker, DomainInterval } from './types';
+import ParsedURL from '../core/ParsedURL';
 import logger from './logging';
+import { Task } from './taskMan';
+import { Worker } from './workerMan';
 
+/**
+ *
+ */
+interface DomainInterval {
+  domain: string;
+
+  // the minimum interval for accessing this domain, in millisecond.
+  min: number;
+}
+
+/**
+ *
+ */
 export default class Matcher {
 
-  private domainIntervals: { [domain: string]: DomainInterval };
-
-  constructor() {
-    this.domainIntervals = {};
-  }
+  private domainIntervals: { [domain: string]: DomainInterval } = {};
 
   setDomainInterval(domain: string, interval: any): void {
     this.domainIntervals[domain] = {
@@ -21,7 +31,7 @@ export default class Matcher {
   }
 
   matches(worker: Worker, task: Task): boolean {
-    var purl = new ParsedURL(task.url);
+    var purl = ParsedURL.get(task.url);
     var domain = purl.domain;
 
     var interval = this.domainIntervals[domain];

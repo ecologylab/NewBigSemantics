@@ -1,8 +1,16 @@
+/**
+ *
+ */
+
 import * as cp from 'child_process';
 import * as request from 'request';
 import * as nurl from 'url';
+import * as Promise from 'bluebird';
 // var SocksProxyAgent = require('socks-proxy-agent');
 
+/**
+ *
+ */
 export class SOCKSConnection {
   private proc: cp.ChildProcess;
 
@@ -59,7 +67,7 @@ export class SOCKSConnection {
       // unexpected close
       if (!this.closing) {
         callback();
-      } 
+      }
     });
   }
 
@@ -83,12 +91,23 @@ export class SOCKSConnection {
   }
 }
 
-export function createConnection(host: string, user: string, port: number): Promise<SOCKSConnection> {
+export function createConnection(host: string, user: string, port: number, identity?: string): Promise<SOCKSConnection> {
   return new Promise<SOCKSConnection>((resolve, reject) => {
     let open = false;
     // -tt forces pseudo-terminal allocation
-    // necessary because we can't read ssh terminal output otherwise 
-    let args = ["-D", String(port), "-o", "StrictHostKeyChecking=no", user + "@" + host, "-tt"];
+    // necessary because we can't read ssh terminal output otherwise
+    let args = [
+      "-D",
+      String(port),
+      "-o",
+      "StrictHostKeyChecking=no",
+      user + "@" + host,
+      "-tt"
+    ];
+    if (identity) {
+      args.unshift(identity);
+      args.unshift("-i");
+    }
     let proc = cp.spawn("ssh", args);
 
     console.log("Running `ssh " + args.join(' ') + '`');

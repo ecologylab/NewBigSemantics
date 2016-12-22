@@ -1,12 +1,36 @@
 // A HTTP response parser.
 
 import * as nodeUrl from 'url';
-import { HttpHeader, HttpResponse } from './types';
+import { HttpHeader, HttpResponse as BSHttpResponse } from '../core/types';
 
-export default
-function parseHttpResp(url: string,
-                       raw: Buffer,
-                       callback: (err: Error, resp: HttpResponse)=>void): void {
+/**
+ * A HTTP response.
+ */
+export interface HttpResponse extends BSHttpResponse {
+  location: string;
+  otherLocations?: string[];
+
+  code: number;
+  message?: string;
+  headers?: HttpHeader[];
+  contentType?: string;
+  charset?: string;
+
+  entity?: Document | Object;
+  xml?: Object;
+  text?: string;
+
+  raw?: Buffer;
+  content?: string;
+}
+
+/**
+ * [parseHttpResp description]
+ * @param {string} url [description]
+ * @param {Buffer} raw [description]
+ * @return {HttpResponse} [description]
+ */
+export default function parseHttpResp(url: string, raw: Buffer): HttpResponse {
   var otherUrls: string[] = [];
 
   var code: number;
@@ -27,7 +51,7 @@ function parseHttpResp(url: string,
     // read status
     var m1 = lines[0].match(/^HTTP\/\d\.\d\s+(\d+)\s+(.*)/);
     if (!m1) {
-      return callback(new Error("Invalid status line: " + lines[0]), null);
+      throw new Error("Invalid status line: " + lines[0]);
     }
     code = Number(m1[1]);
     message = m1[2];
@@ -37,7 +61,7 @@ function parseHttpResp(url: string,
     for (var i = 1; i < lines.length; ++i) {
       var m2 = lines[i].match(/^([^:]+):\s*(.+)/);
       if (!m2) {
-        return callback(new Error("Invalid header line: " + lines[i]), null);
+        throw new Error("Invalid header line: " + lines[i]);
       }
       hdrs.push({ name: m2[1], value: m2[2] });
     }
@@ -50,7 +74,7 @@ function parseHttpResp(url: string,
     otherUrls.push(url);
     var prevUrl = url;
     var foundRedirectLocation = hdrs.some((hdr) => {
-      if (hdr.name === 'Location') {
+      if (hdr.name === 'Location' || hdr.name === 'location') {
         url = hdr.value;
         if (!url.match(/^\w+:\/\/.+/)) {
           url = nodeUrl.resolve(prevUrl, url);
@@ -60,19 +84,19 @@ function parseHttpResp(url: string,
       return false;
     });
     if (!foundRedirectLocation) {
-      return callback(new Error("Redirect w/o Location: " + hdrs), null);
+      throw new Error("Redirect w/o Location: " + hdrs);
     }
   }
 
   var result: HttpResponse = {
-    url: url,
+    location: url,
     code: code,
     message: message,
     headers: hdrs,
-    raw: raw.slice(p),
   };
+  result.raw = raw.slice(p);
   if (otherUrls.length > 0) {
-    result.otherUrls = otherUrls;
+    result.otherLocations = otherUrls;
   }
-  callback(null, result);
+  return result;
 }

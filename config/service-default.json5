@@ -1,18 +1,22 @@
 {
   port: 9000,
   secure_port: 9443,
-  phantom_master_port: 9088,
-
-  use_https: false,
+  useHttps: false,
   // passphrase: '<your passphrase if any>',
   // pfx_path: '<path to your PFX file>',
 
-  repo_source: { url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json' },
-  proxy_url: 'dpool',
-  proxy_blacklist: ['ecologylab.net'],
+  repository_url: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json',
+  cache_repo_for: '7d',
 
-  metadata_cache: {
-    url: "mongodb://localhost:27017/MetadataCache",
-    cache_collection: "metadata"
-  }
+  dpool_service: {
+    host: 'localhost',
+    port: 3000,
+  },
+
+  // metadata_cache: {
+  //   mongo: {
+  //     url: "mongodb://localhost:27017/MetadataCache",
+  //     collection: "metadata"
+  //   },
+  // },
 }

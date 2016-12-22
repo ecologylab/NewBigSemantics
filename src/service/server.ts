@@ -7,45 +7,32 @@ import * as http from 'http';
 import * as https from 'https';
 import * as express from 'express';
 import * as compression from 'compression';
-
-import logger from './logging';
 import * as config from '../utils/config';
-import * as bsservice from './middleware';
+import { ServiceOptions } from './options';
+import logger from './logging';
 
-function loadConfigOrQuit(file: string): any {
-  let conf = config.get(file);
+import * as middleware from './middleware';
 
-  if (conf == null) {
-    logger.fatal("Failed to load configurations - " + file);
-  } else if (conf instanceof Error) {
-    logger.fatal({ err: conf as Error }, "Error loading configurations");
-  } else {
-    logger.info("Configurations loaded: %s", conf);
-    return conf;
-  }
+const serviceOptions = config.getOrFail("service", logger) as ServiceOptions;
 
-  process.exit(1);
-}
-
-let conf = loadConfigOrQuit("service");
-
-// if we're using the dpool for proxying, we have to figure out the port
-if(conf.proxy_url == "dpool") {
-  let dpoolConf = loadConfigOrQuit("dpool");
-  conf.proxy_url = "http://localhost:" + dpoolConf.port + "/proxy?url=";
-}
-
-var bsRouter = express.Router();
-bsservice.create({
+middleware.create({
   appId: 'bigsemantics-service',
   appVer: '3.0.2',
-  serviceBase: conf.repoSource.url as string,
+
+  repositoryUrl: serviceOptions.repository_url,
+  serviceBase: serviceOptions.service_base,
+
+  cacheRepoFor: serviceOptions.cache_repo_for,
 }).then(res => {
+  var bsRouter = express.Router();
+
   bsRouter.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
   });
+
+  bsRouter.use(compression());
 
   bsRouter.use("/metadata.json", res.metadataJson);
   bsRouter.use("/metadata.jsonp", res.metadataJsonp);
@@ -67,24 +54,23 @@ bsservice.create({
   bsRouter.use("/downloaders.json", res.downloadersInfoJson);
 
   bsRouter.use(res.errorHandler);
-}, conf).catch(err => {
+
+  var app = express();
+  app.use("/BigSemanticsService", bsRouter);
+
+  var httpServer = http.createServer(app);
+  httpServer.listen(serviceOptions.port);
+  console.log("BigSemantics Service running on port " + serviceOptions.port);
+
+  if (serviceOptions.use_https) {
+    var options = {
+      passphrase: serviceOptions.passphrase,
+      pfx: fs.readFileSync(serviceOptions.pfx_path),
+    };
+    var httpsServer = https.createServer(options, app);
+    httpsServer.listen(serviceOptions.secure_port);
+    console.log("BigSemantics Service running on secure port " + serviceOptions.secure_port);
+  }
+}).catch(err => {
   console.error(err);
 });
-
-var app = express();
-app.use(compression())
-
-app.use("/BigSemanticsService", bsRouter);
-var httpServer = http.createServer(app);
-httpServer.listen(conf.port);
-
-if (conf.use_https) {
-  var options = {
-    passphrase: conf.passphrase,
-    pfx: fs.readFileSync(conf.pfx_path),
-  };
-  var httpsServer = https.createServer(options, app);
-  httpsServer.listen(conf.secure_port);
-}
-
-console.log("BigSemantics Service running on port " + conf.port + (conf.use_https ? (" and " + conf.secure_port) : ""));

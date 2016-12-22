@@ -1,5 +1,7 @@
 // Test parseHttpResp().
 
+/// <reference types="jasmine" />
+
 import parseHttpResp from '../httpRespParser';
 
 describe("http response parser", () => {
@@ -24,14 +26,12 @@ describe("http response parser", () => {
       "google homepage",
     ].join('\r\n');
     var raw = new Buffer(content);
-    parseHttpResp(url, raw, (err, result) => {
-      expect(err).toBe(null);
-      expect(result.code).toBe(200);
-      expect(result.headers.length).toBe(13);
-      expect(result.headers[3].value).toBe("text/html; charset=ISO-8859-1");
-      expect(result.raw.toString()).toBe("google homepage");
-      done();
-    });
+    var result = parseHttpResp(url, raw);
+    expect(result.code).toBe(200);
+    expect(result.headers.length).toBe(13);
+    expect(result.headers[3].value).toBe("text/html; charset=ISO-8859-1");
+    expect(result.raw.toString()).toBe("google homepage");
+    done();
   });
 
   it("can parse with redirection without content", done => {
@@ -66,13 +66,11 @@ describe("http response parser", () => {
       "google homepage",
     ].join('\r\n');
     var raw = new Buffer(content);
-    parseHttpResp(url, raw, (err, result) => {
-      expect(err).toBe(null);
-      expect(result.code).toBe(200);
-      expect(result.headers.length).toBe(13);
-      expect(result.headers[3].value).toBe("text/html; charset=ISO-8859-1");
-      expect(result.raw.toString()).toBe("google homepage");
-      done();
-    });
+    var result = parseHttpResp(url, raw);
+    expect(result.code).toBe(200);
+    expect(result.headers.length).toBe(13);
+    expect(result.headers[3].value).toBe("text/html; charset=ISO-8859-1");
+    expect(result.raw.toString()).toBe("google homepage");
+    done();
   });
 });
