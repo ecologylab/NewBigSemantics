@@ -3,31 +3,29 @@
 /// <reference path="./xml.d.ts" />
 
 import * as express from 'express';
-
 import * as config from '../utils/config';
-import * as middleware from './middleware';
+import { DPoolOptions } from './options';
+import logger from './logging';
+import create from './middleware';
 
-var conf: any = config.get('dpool');
+let dpoolOptions = config.getOrFail('dpool', logger) as DPoolOptions;
 
-middleware.create((err, mws) => {
-  if (err) {
-    console.error("Cannot create middlware set!");
-    return;
-  }
-
+create().then(mws => {
   var app = express();
-  app.get('/download', mws.validateParams, mws.download);
-  app.get('/proxy', mws.validateParams, mws.proxy);
+  app.get('/download', mws.download);
+  app.get('/proxy', mws.proxy);
+  app.get('/workers', mws.workers);
   app.get('/workers.json', mws.workers);
-  // FIXME remove the following routes -- they are merely for backward
-  // compatibility.
-  app.get('/DownloaderPool/echo/get', mws.get);
-  app.get('/DownloaderPool/page/download.json', mws.validateParams, mws.downloadJson);
-  app.get('/DownloaderPool/page/download.xml', mws.validateParams, mws.downloadXml);
-  // FIXME make it possible to change the port.
-  var server = app.listen(conf.port, () => {
+
+  // FIXME remove the following routes -- they are merely for backward compatibility.
+  app.get('/DownloaderPool/echo/get', mws.echo);
+  app.get('/DownloaderPool/page/download.json', mws.downloadJson);
+  app.get('/DownloaderPool/page/download.xml', mws.downloadXml);
+  var server = app.listen(dpoolOptions.port, () => {
     var host = server.address().address;
     var port = server.address().port;
-    console.log("Web server listening at http://%s:%s", host, port);
+    console.log("DPool server listening at http://%s:%s", host, port);
   });
+}).catch(err => {
+  logger.fatal(err, "Cannot create middleware set!");
 });

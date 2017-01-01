@@ -1,6 +1,24 @@
 {
   port: 3000,
-  mmdRepoUrl: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json',
+
+  cacheSize: 10000,
+  defaultUserAgent: 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36',
+  defaultMaxAttempts: 3,
+  defaultTimePerAttempt: 15000,
+
+  workerStartPort: 8080,
+  workerTaskTimeout: 15000,
+  workerConnectionTimeout: 60000,
+  workerMaxConnectionTimeout: 43200000,
+
+  dispatchingInterval: 1000,
+
+  repositoryUrl: 'http://api.ecologylab.net/BigSemanticsService/mmdrepository.json',
+
+  heartbeatTimeout: 7500,
+  heartbeatInterval: 1000,
+  heartbeatCycle: 50000,
+
   // workerGroups: [
   //   {
   //     group: '<group name>',

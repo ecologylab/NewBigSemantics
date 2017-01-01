@@ -24,10 +24,41 @@ var controlPage = webpage.create();
 var globalMethods = {}, pageMethods = {};
 
 // map of page -> ignored suffixes
-var ignoredSuffixes = {};
+// var ignoredSuffixesMap = {};
 
 // map of filter urls -> callbacks
-var filterCallbacks = {};
+// var filterCallbacksMap = {};
+
+function respond(id, err, result) {
+  controlPage.evaluate(function(id, err, result) {
+    window.socket.emit('response', {
+      id: id,
+      error: err,
+      result: result
+    });
+  }, id, err, result);
+}
+
+function sendMsg(id, type, msg, params) {
+  controlPage.evaluate(function(id, type, msg, params) {
+    window.socket.emit(type, {
+      id: id,
+      text: msg,
+      params: params
+    });
+  }, id, type, msg, params);
+}
+
+function assertParams(msg) {
+  for (var i = 1; i < arguments.length; ++i) {
+    var name = arguments[i];
+    if (!(name in msg.params)) {
+      respond(msg.id, "Missing required param: " + name, null);
+      return false;
+    }
+  }
+  return true;
+}
 
 // set up callback
 controlPage.onCallback = function(msg) {
@@ -36,17 +67,21 @@ controlPage.onCallback = function(msg) {
       case 'exit':
         setTimeout(function() { phantom.exit(0); }, 1);
         break;
+      default:
+        console.error("Unknown specialType: " + JSON.stringify(msg, null, 2));
     }
     return;
   }
 
   if (!msg.id) {
-    return console.warn("Missing request ID: ", JSON.stringify(msg));
+    return console.error("Missing request ID: " + JSON.stringify(msg, null, 2));
   }
   if (!msg.method) {
-    return console.warn("Missing method: ", JSON.stringify(msg));
+    return console.error("Missing method: " + JSON.stringify(msg, null, 2));
   }
   msg.params = msg.params || {};
+
+  console.log("Control page received message: " + msg.id + " - " + msg.method);
 
   if (msg.method in globalMethods) {
     // this is a global method; call with msg itself
@@ -66,10 +101,9 @@ controlPage.onCallback = function(msg) {
     respond(msg.id, "Unknown method: " + msg.method, null);
   }
 };
+
 // connect to master and send 'init' message to declare self
 controlPage.open(masterUrl, function(status) {
-  console.log("Control page status: " + status);
-
   controlPage.evaluate(function(id, host, port, pactFile) {
     window.socket.emit('init', {
       agentId: id,
@@ -80,37 +114,6 @@ controlPage.open(masterUrl, function(status) {
   }, id, host, port, pactFile);
 });
 
-function assertParams(msg) {
-  for (var i = 1; i < arguments.length; ++i) {
-    var name = arguments[i];
-    if (!(name in msg.params)) {
-      respond(msg.id, "Missing required param: " + name, null);
-      return false;
-    }
-  }
-  return true;
-}
-
-function respond(id, err, result) {
-  controlPage.evaluate(function(id, result, err) {
-    window.socket.emit('response', {
-      id: id,
-      result: result,
-      err: err
-    });
-  }, id, result, err);
-}
-
-function sendMsg(id, type, msg, params) {
-  controlPage.evaluate(function(type, id, msg, params) {
-    window.socket.emit(type, {
-      id: id,
-      text: msg,
-      params: params
-    })
-  }, type, id, msg, params);
-}
-
 // global methods
 
 globalMethods.createPage = function(msg) {
@@ -119,11 +122,13 @@ globalMethods.createPage = function(msg) {
     var page = webpage.create();
 
     page.onCallback = function(msg) {
-      if(msg.specialType) {
+      if (msg.specialType) {
         switch(msg.specialType) {
           case "resp":
-            respond(msg.id, msg.err, msg.result);
+            respond(msg.id, msg.error, msg.result);
             break;
+          default:
+            console.error("Unknown specialType: " + JSON.stringify(msg, null, 2));
         }
       }
     }
@@ -131,36 +136,39 @@ globalMethods.createPage = function(msg) {
     page.onResourceRequested = function(requestData, networkRequest) {
       var url = requestData.url;
 
-      if(page.ignoredSuffixes) {
+      if (page.ignoredSuffixes) {
         var ext = url.split('?')[0].split('.').pop();
-        if(page.ignoredSuffixes.indexOf(ext) != -1) {
+        if (page.ignoredSuffixes.indexOf(ext) != -1) {
           networkRequest.abort();
           return;
         }
       }
 
-      if(page.proxy && url.indexOf("file://") === -1 && url.indexOf("data:") !== 0) {
+      if (page.proxy && url.indexOf("file://") !== 0 && url.indexOf("data:") !== 0) {
         var redirect = true;
 
-        if(page.proxyBlacklist) {
-          for(var i in page.proxyBlacklist) {
-            if(url.indexOf(page.proxyBlacklist[i]) !== -1) {
+        if (page.proxyBlacklist) {
+          for (var i in page.proxyBlacklist) {
+            if (url.indexOf(page.proxyBlacklist[i]) !== -1) {
               redirect = false;
+              break;
             }
           }
-        } else if(page.proxyWhitelist) {
+        } else if (page.proxyWhitelist) {
           redirect = false;
-
-          for(var i in page.proxyWhitelist) {
-            if(url.indexOf(page.proxyWhitelist[i]) !== -1) {
+          for (var i in page.proxyWhitelist) {
+            if (url.indexOf(page.proxyWhitelist[i]) !== -1) {
               redirect = true;
             }
           }
         }
 
-        if(redirect) {
-          var newUrl = page.proxy + encodeURIComponent(url);
+        if (redirect) {
+          var newUrl = page.proxy + '?url=' + encodeURIComponent(url);
+          console.log("Request redirected: " + newUrl);
           networkRequest.changeUrl(newUrl);
+        } else {
+          console.log("Request blocked: " + url);
         }
       }
     };
@@ -171,29 +179,35 @@ globalMethods.createPage = function(msg) {
         for (var i = 0; i < response.headers.length; i++) {
           var header = response.headers[i];
           if (header.name === "X-Task-Info") {
-            sendMsg(pageId, "task", decodeURI(header.value));
+            sendMsg(pageId, "proxy-task-info", decodeURI(header.value));
+            break;
           }
         }
       }
     }
 
-    // TODO this should be dynamically turned on / off too.
-    /*
     page.onResourceError = function(resourceError) {
-      console.log("resource error: " + JSON.stringify(resourceError, null, 4));
+      console.error("Resource error: " + JSON.stringify(resourceError, null, 2));
     }
 
     page.onResourceTimeout = function(request) {
-      console.log("resource timeout: " + JSON.stringify(request, null, 4));
+      console.warn("Resource timeout: " + JSON.stringify(request, null, 2));
     }
-    */
 
     page.onConsoleMessage = function(msg, lineNum, sourceId) {
       sendMsg(pageId, 'console', msg);
     };
 
-    page.onError = function(msg, trace) {
-      sendMsg(pageId, 'error', msg, { trace: trace });
+    page.onError = function(msg, stack) {
+      var trace = undefined;
+      if (stack && stack.length) {
+        var parts = [];
+        stack.forEach(function(t) {
+          parts.push(t.file + ':' + t.line + (t.function ? ' (in function "' + t.function +'")' : ''));
+        });
+        trace = parts.join(', from ');
+      }
+      sendMsg(pageId, 'error', msg, { trace: trace, rawStack: stack });
     };
 
     pages[msg.params.pageId] = page;
@@ -201,41 +215,38 @@ globalMethods.createPage = function(msg) {
   }
 }
 
+// utilities
+
+function shadow(dest, src) {
+  if (!src) return dest;
+  return src;
+}
+
 // page methods
+
+function processClientOptions(page, msg) {
+  if (msg.params && msg.params.options) {
+    page.ignoredSuffixes = shadow(page.ignoredSuffixes, msg.params.options.ignoredSuffixes);
+    if (msg.params.options.proxyService) {
+      page.proxy = shadow(page.proxy, msg.params.options.proxyService.endpoint);
+      page.proxyBlacklist = shadow(page.proxyBlacklist, msg.params.options.proxyService.blacklist);
+      page.proxyWhitelist = shadow(page.proxyWhitelist, msg.params.options.proxyService.whitelist);
+    }
+  }
+}
 
 pageMethods.open = function(page, msg) {
   if (assertParams(msg, 'url')) {
+    processClientOptions(page, msg);
     page.open(msg.params.url, msg.params.settings, function(status) {
       respond(msg.id);
     });
   }
 }
 
-pageMethods.setIgnoredSuffixes = function(page, msg) {
-  page.ignoredSuffixes = msg.params.suffixes;
-  respond(msg.id);
-}
-
-pageMethods.setProxy = function(page, msg) {
-  page.proxy = msg.params.proxyURL;
-
-  respond(msg.id);
-}
-
-pageMethods.setProxyBlacklist = function(page, msg) {
-  page.proxyBlacklist = msg.params.patterns;
-
-  respond(msg.id);
-}
-
-pageMethods.setProxyWhitelist = function(page, msg) {
-  page.proxyWhitelist = msg.params.patterns;
-
-  respond(msg.id);
-}
-
 pageMethods.setContent = function(page, msg) {
   if (assertParams(msg, 'content', 'url')) {
+    processClientOptions(page, msg);
     page.setContent(msg.params.content, msg.params.url);
     respond(msg.id);
   }
@@ -271,18 +282,15 @@ pageMethods.evaluate = function(page, msg) {
 
 pageMethods.evaluateAsync = function(page, msg) {
   if (assertParams(msg, 'func')) {
-    var closure = function(id, func, params) {
+    var closure = function(id, func, args) {
       function respond(err, result) {
-        window.callPhantom({ specialType: "resp", id: id, result: result, err: err });
+        window.callPhantom({ specialType: "resp", id: id, error: err, result: result });
       }
-
-      eval("f = " + func);
-
-      f.apply(f, params);
+      eval("asyncfunc = " + func);
+      asyncfunc.apply(null, args);
     }
-
-    var args = [closure, msg.id, msg.params.func, msg.params.args || []]; // func, arg1, arg2, ..., argN
-    page.evaluate.apply(page, args);
+    var pargs = [closure, msg.id, msg.params.func, msg.params.args || []]; // func, arg1, arg2, ..., argN
+    page.evaluate.apply(page, pargs);
   }
 }
 

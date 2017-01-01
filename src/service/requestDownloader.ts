@@ -8,7 +8,10 @@ import ParsedURL from '../core/ParsedURL';
 import { HttpResponse } from '../core/types';
 import { RequestOptions, BaseDownloader } from '../core/downloader';
 
-export default class RequestDownloader extends BaseDownloader {
+/**
+ *
+ */
+export class RequestDownloader extends BaseDownloader {
 
   static parseContentType(resp: HttpResponse, contentTypeHeader: string) {
     var matches = contentTypeHeader.match(/([^;]+)(;\s*charset=(.*))?/);
@@ -36,13 +39,14 @@ export default class RequestDownloader extends BaseDownloader {
   }
 
   protected doHttpGet(location: string | ParsedURL, options?: RequestOptions): Promise<HttpResponse> {
-    return new Promise((resolve, reject) => {
+    return new Promise<HttpResponse>((resolve, reject) => {
       var purl = ParsedURL.get(location);
-      var result: HttpResponse = { location: purl.toString(), code: 0 };
+      var url = purl.toString();
+      var result: HttpResponse = { location: url, code: 0 };
 
       var rOpts: any = {
         method: 'GET',
-        url: location,
+        url: url,
         headers: {
           'Accept': 'text/html,application/xhtml+xml,application/xml,application/json,*/*',
           'Host': purl.host,
@@ -66,7 +70,9 @@ export default class RequestDownloader extends BaseDownloader {
       r.on('redirect', function() {
         RequestDownloader.addOtherLocation(result, r['uri'].href);
       });
-    }) as Promise<HttpResponse>;
+    });
   }
 
 }
+
+export default RequestDownloader;
