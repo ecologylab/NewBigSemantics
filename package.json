@@ -1,6 +1,6 @@
 {
   "name": "bigsemantics-service",
-  "version": "3.0.3",
+  "version": "3.1.0",
   "description": "The BigSemantics service.",
   "dependencies": {
     "@types/react": "^0.14.55",

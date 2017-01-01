@@ -17,7 +17,7 @@ const serviceOptions = config.getOrFail("service", logger) as ServiceOptions;
 
 middleware.create({
   appId: 'bigsemantics-service',
-  appVer: '3.0.3',
+  appVer: '3.1.0',
 
   phantomService: serviceOptions.phantomService,
 
