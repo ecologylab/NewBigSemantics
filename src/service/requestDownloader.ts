@@ -6,7 +6,7 @@ import * as Promise from 'bluebird';
 import * as request from 'request';
 import ParsedURL from '../core/ParsedURL';
 import { HttpResponse } from '../core/types';
-import { RequestOptions, BaseDownloader } from '../core/downloader';
+import { RequestOptions, BaseDownloader } from '../core/Downloader';
 
 /**
  *

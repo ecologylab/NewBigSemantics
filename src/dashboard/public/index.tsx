@@ -22,9 +22,9 @@ interface Task {
 }
 
 function showDetails(taskId: string) {
-  $.get("bsTask.json?id=" + taskId, task => {
+  $.get("bsTask.json?id=" + taskId, log => {
     ReactDOM.render(
-      <TaskView task={task} />,
+      <TaskView log={log} />,
       document.getElementById("taskInfo")
     );
 
@@ -41,16 +41,28 @@ function showDetails(taskId: string) {
 }
 
 interface TaskProps {
-  task: Task;
+  log: { 
+    task: Task;
+    time: Date;
+    msg: string;
+    level: number; 
+    hostname: string;
+    pid: number;
+  };
 }
 
 class TaskRow extends React.Component<TaskProps, {}> {
   render() {
-    var id = this.props.task.id;
+    let id = "";
+    let errorLevel = 0;
 
-    var idContent = id ? (<a onClick={() => showDetails(this.props.task.id)}>{id}</a>) : "";
+    if(this.props.log.task) {
+      id = this.props.log.task.id;
+      errorLevel = this.props.log.level; 
+    }
 
-    var errorLevel = this.props.task.level;
+    var idContent = id ? (<a onClick={() => showDetails(id)}>{id}</a>) : "";
+
     var cls = "positive";
     if(errorLevel == 50 || errorLevel == 60)
       cls = "error";
@@ -59,12 +71,12 @@ class TaskRow extends React.Component<TaskProps, {}> {
 
     return (
       <tr className={cls}>
-        <td><TimeAgo datetime={new Date(this.props.task.time)} /></td>
+        <td><TimeAgo datetime={new Date(this.props.log.time)} /></td>
         <td className="selectable">
           {idContent}
         </td>
         <td>
-          {this.props.task.msg}
+          {this.props.log.msg}
         </td>
       </tr>
     );
@@ -73,7 +85,7 @@ class TaskRow extends React.Component<TaskProps, {}> {
 
 interface TasksState {
   page: number;
-  tasks: any[];
+  logs: any[];
 }
 
 class TasksList extends React.Component<{}, TasksState> {
@@ -82,7 +94,7 @@ class TasksList extends React.Component<{}, TasksState> {
 
     this.state = {
       page: 0,
-      tasks: []
+      logs: []
     };
 
     this.updateTasks();
@@ -93,16 +105,23 @@ class TasksList extends React.Component<{}, TasksState> {
 
   updateTasks() {
     $.getJSON("bsTasks.json?page=" + this.state.page, resp => {
-      resp.tasks.reverse();
+      resp.logs.reverse();
 
-      if(this.state.tasks.length > 0) {
-        if(resp.tasks[0].id == this.state.tasks[0].id)
+      if(this.state.logs.length > 0) {
+        let respLog = resp.logs[0];
+        let respId = respLog.task && respLog.task.id;
+
+        let curLog = this.state.logs[0];
+        let curId = curLog.task && curLog.task.id;
+
+        // don't bother updating if we have the same content
+        if(respId == curId)
           return;
       }
 
       this.setState({
         page: this.state.page,
-        tasks: resp.tasks
+        logs: resp.logs
       });
 
       $("#numTasks").html(resp.numTasks);
@@ -115,8 +134,8 @@ class TasksList extends React.Component<{}, TasksState> {
   render() {
     let rows = [];
 
-    for(let task of this.state.tasks) {
-      rows.push(<TaskRow task={task} />);
+    for(let log of this.state.logs) {
+      rows.push(<TaskRow log={log} />);
     }
 
     return (
@@ -142,44 +161,44 @@ class TaskView extends React.Component<TaskProps, {}> {
   }
 
   render() {
-    let task = this.props.task;
+    let log = this.props.log;
 
     let logs = [];
-    for(let log of task.logs) {
+    for(let logItem of log.task.logs) {
       logs.push(
         <tr>
-          <td><span>{new Date(log.datetime).toDateString()}</span></td>
-          <td>{log.name}</td>
-          <td>{!(log.args && log.args.stack) ? log.args : ""}</td>
+          <td><span>{new Date(logItem.datetime).toString()}</span></td>
+          <td>{logItem.name}</td>
+          <td>{!(logItem.args && logItem.args.stack) ? logItem.args : ""}</td>
         </tr>
       );
     }
 
     return (
       <div id="taskModal" className="ui long modal">
-        <div className="header">{task.msg}</div>
+        <div className="header">{log.task.msg}</div>
         <div className="content">
           <table className="ui celled striped table">
           <tbody>
             <tr>
               <td><b>ID</b></td>
-              <td>{task.id}</td>
+              <td>{log.task.id}</td>
             </tr>
             <tr>
               <td><b>URL</b></td>
-              <td>{task.url}</td>
+              <td>{log.task.url}</td>
             </tr>
             <tr>
               <td><b>Hostname</b></td>
-              <td>{task.hostname}</td>
+              <td>{log.hostname}</td>
             </tr>
             <tr>
               <td><b>PID</b></td>
-              <td>{task.pid}</td>
+              <td>{log.pid}</td>
             </tr>
             <tr>
               <td><b>Timestamp</b></td>
-              <td><span>{new Date(task.time).toDateString()}</span></td>
+              <td><span>{new Date(log.time).toString()}</span></td>
             </tr>
           </tbody>
         </table>
@@ -201,20 +220,20 @@ class TaskView extends React.Component<TaskProps, {}> {
           <div className="ui header">Request Information</div>
           <table className="ui celled striped table">
             <tbody>
-              <tr><td><b>IP</b></td><td>{task.reqIp}</td></tr>
-              { task.reqId ? <tr><td><b>Request ID</b></td><td>{task.reqId}</td></tr> : ""}
-              { task.appId ? <tr><td><b>Application ID</b></td><td>{task.appId}</td></tr> : ""}
-              { task.userId ? <tr><td><b>User ID</b></td><td>{task.userId}</td></tr> : ""}
-              { task.sessionId ? <tr><td><b>Session ID</b></td><td>{task.sessionId}</td></tr> : ""}
+              <tr><td><b>IP</b></td><td>{log.task.reqIp}</td></tr>
+              { log.task.reqId ? <tr><td><b>Request ID</b></td><td>{log.task.reqId}</td></tr> : ""}
+              { log.task.appId ? <tr><td><b>Application ID</b></td><td>{log.task.appId}</td></tr> : ""}
+              { log.task.userId ? <tr><td><b>User ID</b></td><td>{log.task.userId}</td></tr> : ""}
+              { log.task.sessionId ? <tr><td><b>Session ID</b></td><td>{log.task.sessionId}</td></tr> : ""}
             </tbody>
           </table>
 
           {
-            task.stack ?
+            log.task.stack ?
               <div>
                 <div className="ui header">Stack Trace</div>
                 <div className="ui segment">
-                  {task.stack}
+                  { log.task.stack }
                 </div>
               </div>
             : ""
@@ -227,7 +246,7 @@ class TaskView extends React.Component<TaskProps, {}> {
             </div>
             <div className="content">
               <div className="ui form">
-                <textarea rows={25}>{JSON.stringify(task, null, 2)}</textarea>
+                <textarea rows={25}>{JSON.stringify(log, null, 2)}</textarea>
               </div>
             </div>
           </div>

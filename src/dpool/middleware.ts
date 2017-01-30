@@ -12,7 +12,7 @@ import * as simpl from 'simpl.js';
 import { Repository } from '../core/types';
 import * as config from '../utils/config';
 import { DPoolOptions } from './options';
-import logger from './logging';
+import { logger, taskMon } from './logging';
 import { TaskProto, TaskMan } from './taskMan';
 import { WorkerMan } from './workerMan';
 import { Matcher } from './matcher';
@@ -44,6 +44,7 @@ export interface MiddlewareSet {
   download: Middleware;
   proxy: Middleware;
   workers: Middleware;
+  taskInfo: Middleware;
 
   /**
    * @deprecated
@@ -80,6 +81,22 @@ function preprocessRequest(req: Request): void {
     req.dpool.task.timePerAttempt = Number(req.query.timeout);
   }
 }
+
+function taskInfoFactory(): Middleware {
+  return (req, resp, next) => {
+    if(!req.query.id) {
+      throw new Error("Missing required parameter 'id'");
+    }
+
+    let matchingTasks = taskMon.filter(task => task.id === req.query.id);
+
+    if(matchingTasks.length === 0) {
+      throw new Error(`No matching task found for id ${req.query.id}`);
+    }
+
+    resp.json(matchingTasks[0]);
+  };
+} 
 
 /**
  * @param {Error} err
@@ -399,6 +416,7 @@ export default function create(): Promise<MiddlewareSet> {
       download: downloadFactory(dpool),
       proxy: proxyFactory(dpool),
       workers: workersFactory(dpool),
+      taskInfo: taskInfoFactory(),
       echo: echoFactory(),
       downloadJson: downloadJsonFactory(dpool),
       downloadXml: downloadXmlFactory(dpool),

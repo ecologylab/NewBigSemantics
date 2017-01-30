@@ -1,7 +1,9 @@
 // Logging.
 
 import * as bunyan from 'bunyan';
+import * as logging from '../utils/logging';
 
+export let taskMon = new logging.TaskMonitor(10000);
 export var logger = bunyan.createLogger({
   name: 'dpool-log',
   streams: [
@@ -11,6 +13,10 @@ export var logger = bunyan.createLogger({
       path: 'dpool.log',
       period: '1d',
       count: 30,
+    }, 
+    {
+      type: 'raw',
+      stream: taskMon
     },
     {
       level: 'info',

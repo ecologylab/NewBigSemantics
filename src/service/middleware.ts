@@ -125,12 +125,13 @@ function metadataFactory(bs: BSPhantom, cache: MetadataCache, format?: string): 
         req.task.log("task completed successfully");
         response.metadata = result.metadata;
         sendResponse(req, res, response, format);
-        logger.info(req.task, "metadata extraction task succeeded");
+        logger.info({ task: req.task }, "metadata extraction task succeeded");
       }
     }).catch(err => {
       req.task.log("task terminated", err);
       logger.error({ err: err, task: req.task }, "metadata extraction task failed");
-      return next(err);
+      res.sendStatus(500)
+      res.end(err);
     });
   };
 }
@@ -151,13 +152,13 @@ function repositoryFactory(bs: BSPhantom, format: string): Middleware {
         res.contentType('application/json');
         res.send("{repository:" + serializedRepo + "}");
         req.task.log("task completed successfully");
-        logger.info(req.task, "mmdrepository task succeeded");
+        logger.info({ task: req.task }, "mmdrepository task succeeded");
       } else if (format === 'jsonp') {
         let callback = req.query.callback || 'null';
         res.contentType('application/javascript');
         res.send(callback + "({repository:" + serializedRepo + "})");
         req.task.log("task completed successfully");
-        logger.info(req.task, "mmdrepository task succeeded");
+        logger.info({ task: req.task }, "mmdrepository task succeeded");
       } else {
         next(new Error("Unsupported format: " + format));
       }
@@ -191,20 +192,22 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
       promisedResult = bs.selectMmd(req.mmd.byUrl);
     } else {
       task.log("failure: no name or url specified");
-      logger.warn(task, "meta-metadata task could not be completed - no parameters");
-      return next(new Error("Either 'url' or 'name' parameter required."));
+      logger.warn({ task: task }, "meta-metadata task could not be completed - no parameters");
+      res.sendStatus(500);
+      res.end("Either 'url' or 'name' parameter required.")
     }
 
     if (promisedResult) {
       promisedResult.then(mmd => {
         task.log("task completed successfully");
-        logger.info(task, "meta-metadata request succeeded");
+        logger.info({ task: task }, "meta-metadata request succeeded");
         response.mmd = mmd;
         sendResponse(req, res, response, format);
       }).catch(err => {
         task.log("task failed");
         logger.error({ err: err, task: task }, "meta-metadata task failed");
-        next(new Error("The requested Meta-Metadata could not be found."));
+        res.sendStatus(500);
+        res.end("The requested Meta-Metadata could not be found.");
       });
     }
   }
@@ -220,7 +223,7 @@ function taskListFactory(): Middleware {
     // TODO paging!
 
     let response = {
-      tasks: taskMon.getLast(50),
+      logs: taskMon.getLast(50),
       numTasks: taskMon.size,
       successes: taskMon.stats.successes,
       warnings: taskMon.stats.warnings,
@@ -236,10 +239,11 @@ function taskListFactory(): Middleware {
 function taskDetailFactory(): Middleware {
   return (req, res, next) => {
     if (!req.query.id) {
-      throw new Error("Missing required query 'id'");
+      res.sendStatus(500);
+      res.end("Missing required parameter 'id'");
     }
     req.taskId = req.query.id;
-    let task = taskMon.filter(log => log.id === req.taskId)[0];
+    let task = taskMon.filter(log => (log.task && log.task.id) === req.taskId)[0];
     res.json(task);
   };
 }

@@ -38,7 +38,7 @@ export interface Log {
  * A generic task, for use in TaskMonitor.
  */
 export class Task extends EventEmitter {
-  level: number = 0;
+  level: number = bunyan.INFO;
   logs: Log[];
 
   /**
@@ -57,6 +57,17 @@ export class Task extends EventEmitter {
       name: name,
       args: argsObj,
     });
+  }
+
+  // this seems to be necessary for the task object to properly log
+  toJSON() {
+    var alt = {};
+
+    Object.getOwnPropertyNames(this).forEach(function (key) {
+      alt[key] = this[key];
+    }, this);
+
+    return alt;
   }
 }
 
