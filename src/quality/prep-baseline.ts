@@ -147,7 +147,7 @@ function createExtractor() {
         };
 
         extractMetadata(resp, mmd, null, null, function(err, metadata) {
-          respond(err, JSON.stringify(metadata));  
+          respond(err, JSON.stringify(metadata));
         });
       }, smmd)
       .then(result => mcallback(null, JSON.parse(result)))
@@ -155,7 +155,7 @@ function createExtractor() {
       .catch(err => console.error("ERROR: ", err))
       //.finally(() => master.shutdown());
   }
-  
+
   return extractor;
 }
 
@@ -166,16 +166,19 @@ var options = {
   page: 1
 }
 
-var master = new pm.Master();
+var master = new pm.Master({
+  masterPort: 9088,
+  numberOfInitialAgents: 1,
+});
 var repoMan = new RepoMan({ url: repoSource.url }, options);
 
 repoMan.onReady((err, repoMan) => {
   if(err) { console.error(err); return; }
   console.log("RepoMan ready");
-  
+
   options.repoMan = repoMan;
   options.extractor = createExtractor();
-  
+
   var bs = new BigSemantics(null, options);
   bs.onReady((err, bs) => {
     if (err) { console.error(err); return; }

@@ -1,77 +1,92 @@
 // Simple process related utilities.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as cp from 'child_process';
+import * as Promise from 'bluebird';
 
-interface SpawnResult {
+/**
+ *
+ */
+export interface SpawnResult {
   code?: number;
-  signal?: any;
-  
+  signal?: string;
+  stdout?: Buffer | string;
+  stderr?: Buffer | string;
+
   cmd: string;
-  args: string[];
-  stdout: Buffer;
-  stderr: Buffer;
+  args?: string[];
 }
 
-export function spawn(cmd: string,
-                      args: Array<string>,
-                      options: any,
-                      callback: (err: Error, result: SpawnResult)=>void): void {
-  options = options || {};
-  options.stdio = options.stdio || [ 'ignore', 'pipe', 'pipe' ];
-  var p = cp.spawn(cmd, args, options);
+export class ExitError extends Error {
+  result: SpawnResult;
 
-  var finished = false;
-  var error: Error = null;
-  var stdout: Buffer = null;
-  var stderr: Buffer = null;
+  constructor(result: SpawnResult, message?: string) {
+    super(message);
+    this.result = result;
+  }
+}
 
-  p.on('error', (err) => {
-    if (!finished) {
+/**
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {cp.SpawnOptions} options
+ * @return {Promise<SpawnResult>}
+ */
+export function spawn(cmd: string, args: string[] = [], options: cp.SpawnOptions = {}): Promise<SpawnResult> {
+  return new Promise<SpawnResult>((resolve, reject) => {
+    options.stdio = options.stdio || [ 'ignore', 'pipe', 'pipe' ];
+    let p = cp.spawn(cmd, args, options);
+
+    let finished = false;
+    let stdout: Buffer = null;
+    let stderr: Buffer = null;
+
+    p.on('error', err => {
       finished = true;
-      error = err;
       p.disconnect();
-      callback(error, {
-        cmd: cmd,
-        args: args,
-        stdout: stdout,
-        stderr: stderr,
-      });
-    }
-  });
-  p.on('close', (code, signal) => {
-    if (!finished) {
+      reject(err);
+    });
+
+    p.on('close', (code, signal) => {
       finished = true;
-      if (typeof code === 'number' && code != 0) {
-        error = new Error("Non-zero return code: " + code);
-      }
-      callback(error, {
+      let result: SpawnResult = {
         code: code,
         signal: signal,
         cmd: cmd,
         args: args,
         stdout: stdout,
         stderr: stderr,
-      });
-    }
-  });
-  p.stdout.on('data', (data) => {
-    if (!finished) {
-      if (stdout === null) {
-        stdout = data;
-      } else {
-        stdout = Buffer.concat([ stdout, data ]);
       }
-    }
-  });
-  p.stderr.on('data', (data) => {
-    if (!finished) {
-      if (stderr === null) {
-        stderr = data;
-      } else {
-        stderr = Buffer.concat([ stderr, data ]);
+      if (code !== 0) {
+        reject(new ExitError(result, "Spawned process exited with error code"));
+        return;
       }
-    }
+      resolve(result);
+    });
+
+    p.stdout.on('data', (data: Buffer) => {
+      if (finished) return;
+      if (stdout) stdout = Buffer.concat([ stdout, data ]);
+      else stdout = data;
+    });
+
+    p.stderr.on('data', (data: Buffer) => {
+      if (finished) return;
+      if (stderr) stderr = Buffer.concat([ stderr, data ]);
+      else stderr = data;
+    });
   });
+}
+
+/**
+ * @param {SpawnResult} spawnResult
+ * @return {NiceSpawnResult}
+ */
+export function niceSpawnResult(result: SpawnResult): SpawnResult {
+  if (result.stdout instanceof Buffer) {
+    result.stdout = result.stdout.toString();
+  }
+  if (result.stderr instanceof Buffer) {
+    result.stderr = result.stderr.toString();
+  }
+  return result;
 }

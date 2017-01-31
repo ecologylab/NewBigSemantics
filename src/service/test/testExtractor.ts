@@ -1,24 +1,19 @@
 // Unit test for the PhantomJS-based extractor.
 
-import BSPhantom from '../bscore';
-import * as pm from '../../phantom/master';
+// FIXME whole file needs fix!!
+
+/// <reference types="jasmine" />
+
+import BSPhantom from '../bsPhantom';
+import Master from '../../phantom/master';
+import Agent from '../../phantom/agent';
+import Page from '../../phantom/page';
 import * as path from 'path';
 import * as fs from 'fs';
 
 // Files to inject for extraction
 var bsjsFiles = [
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/ParsedURL.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BSUtils.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/FieldOps.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Extractor.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/simpl/simplBase.js'),
-
-  // needed for using full mmdrepo
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Readyable.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/Downloader.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BSService.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/RepoMan.js'),
-  path.resolve(__dirname, '../../../BigSemanticsJavaScript/bsjsCore/BigSemantics.js'),
+  path.join(__dirname, '../bigsemantics-core.bundle.js'),
 ];
 
 declare var extractMetadata:
@@ -32,20 +27,20 @@ interface MetadataResult {
   (err: Error, metadata: any): void;
 }
 
-var master: pm.Master;
+var master: Master;
 var timeout = 5000;
 
-function openPage(uri: string): pm.Page {
+function openPage(uri: string): Page {
   var agent = master.randomAgent();
   var page = agent.createPage();
 
-  page.onConsole(msg => {
+  page.on('console', msg => {
     // Stop cross-origin error spam
     if(msg.indexOf('Cross-origin') == -1)
       console.log("Console: " + msg);
   });
 
-  page.onError((err, trace) => {
+  page.on('error', err => {
     console.log("Error: " + err)
   });
 
@@ -136,7 +131,10 @@ describe("Without inheritance", () => {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {
@@ -261,7 +259,10 @@ describe("With JS modifying page", function() {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {
@@ -302,7 +303,10 @@ describe("With xpath variable", function() {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {
@@ -386,7 +390,10 @@ describe("With extract_as_html", function() {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {
@@ -429,7 +436,10 @@ describe("With extracted URL", function() {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {
@@ -472,7 +482,10 @@ describe("With inheritance", function() {
     );
 
   beforeEach(function() {
-    master = new pm.Master();
+    master = new Master({
+      masterPort: 29088,
+      numberOfInitialAgents: 1,
+    });
   });
 
   afterEach(function(done) {

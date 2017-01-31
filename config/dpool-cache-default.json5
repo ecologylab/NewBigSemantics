@@ -1,0 +1,17 @@
+{
+  port: 10001,
+
+  dpoolService: {
+    host: 'localhost',
+    port: 3000,
+  },
+
+  minio: {
+    endpoint: "localhost",
+    port: 10000,
+    securePort: 10002,
+    secure: false,
+    // accessKey: '<your accessKey>',
+    // secretKey: '<your secretKey>',
+  }
+}

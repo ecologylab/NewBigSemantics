@@ -8,6 +8,7 @@
 ## Logs
 logs
 *.log
+*.log.*
 
 # Runtime data
 pids
@@ -46,4 +47,3 @@ build/
 
 # work in progress
 _wip_*
-

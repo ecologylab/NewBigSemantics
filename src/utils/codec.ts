@@ -1,7 +1,5 @@
 // Coding / decoding utilities.
 
-/// <reference path="../../typings/index.d.ts" />
-
 import * as crypto from 'crypto';
 
 export function base32enc(s: string): string;
