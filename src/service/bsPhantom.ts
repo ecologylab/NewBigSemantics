@@ -184,7 +184,7 @@ export class BSPhantom extends AbstractBigSemantics {
   }
 
   selectMmd(location: string | ParsedURL, options?: BSPhantomCallOptions): Promise<MetaMetadata> {
-    return this.repoMan.selectMmd(name, options);
+    return this.repoMan.selectMmd(location, options);
   }
 
   normalizeLocation(location: string | ParsedURL, options?: BSPhantomCallOptions): Promise<string> {

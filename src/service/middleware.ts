@@ -177,35 +177,35 @@ function wrapperFactory(bs: BSPhantom, format?: string): Middleware {
     req.mmd.byName = req.query.name;
     req.mmd.byUrl = req.query.url || req.query.uri;
 
-    let task = new Task(req.originalUrl);
-    copyParameters(req, task);
-    task.log("task initiated");
+    req.task = new Task(req.originalUrl);
+    copyParameters(req, req.task);
+    req.task.log("task initiated");
 
     let response: BSResult = {};
 
     let promisedResult: Promise<MetaMetadata> =  null;
     if (req.mmd.byName) {
-      task.log("mmd requested by name", req.mmd.byName);
+      req.task.log("mmd requested by name", req.mmd.byName);
       promisedResult = bs.loadMmd(req.mmd.byName);
     } else if (req.mmd.byUrl) {
-      task.log("mmd requested by url", req.mmd.byUrl);
+      req.task.log("mmd requested by url", req.mmd.byUrl);
       promisedResult = bs.selectMmd(req.mmd.byUrl);
     } else {
-      task.log("failure: no name or url specified");
-      logger.warn({ task: task }, "meta-metadata task could not be completed - no parameters");
+      req.task.log("failure: no name or url specified");
+      logger.warn({ task: req.task }, "meta-metadata task could not be completed - no parameters");
       res.sendStatus(500);
       res.end("Either 'url' or 'name' parameter required.")
     }
 
     if (promisedResult) {
       promisedResult.then(mmd => {
-        task.log("task completed successfully");
-        logger.info({ task: task }, "meta-metadata request succeeded");
+        req.task.log("task completed successfully");
+        logger.info({ task: req.task }, "meta-metadata request succeeded");
         response.mmd = mmd;
         sendResponse(req, res, response, format);
       }).catch(err => {
-        task.log("task failed");
-        logger.error({ err: err, task: task }, "meta-metadata task failed");
+        req.task.log("task failed");
+        logger.error({ err: err, task: req.task }, "meta-metadata task failed");
         res.sendStatus(500);
         res.end("The requested Meta-Metadata could not be found.");
       });

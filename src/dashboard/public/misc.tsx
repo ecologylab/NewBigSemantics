@@ -107,3 +107,16 @@ class TimeAgo extends React.Component<TimeAgoProps, TimeAgoState> {
     );
   }
 }
+
+function getFormattedDate(date: Date) {
+    let pad = n => (n < 10 ? "0" : "") + n;
+
+    let month = pad(date.getMonth() + 1);
+    let day = pad(date.getDate());
+    let hour = pad(date.getHours());
+    let min = pad(date.getMinutes());
+    let sec = pad(date.getSeconds());
+    let period = date.getHours() >= 12 ? "PM" : "AM";
+
+    return `${date.getFullYear()}-${month}-${day} ${hour}:${min}:${sec} ${period}`;
+}

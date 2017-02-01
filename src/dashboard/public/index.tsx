@@ -42,6 +42,7 @@ function showDetails(taskId: string) {
 
 interface TaskProps {
   log: { 
+    err?: { stack: string; };
     task: Task;
     time: Date;
     msg: string;
@@ -167,7 +168,7 @@ class TaskView extends React.Component<TaskProps, {}> {
     for(let logItem of log.task.logs) {
       logs.push(
         <tr>
-          <td><span>{new Date(logItem.datetime).toString()}</span></td>
+          <td><span>{getFormattedDate(new Date(logItem.datetime))}</span></td>
           <td>{logItem.name}</td>
           <td>{!(logItem.args && logItem.args.stack) ? logItem.args : ""}</td>
         </tr>
@@ -198,7 +199,7 @@ class TaskView extends React.Component<TaskProps, {}> {
             </tr>
             <tr>
               <td><b>Timestamp</b></td>
-              <td><span>{new Date(log.time).toString()}</span></td>
+              <td><span>{getFormattedDate(new Date(log.time))}</span></td>
             </tr>
           </tbody>
         </table>
@@ -207,7 +208,7 @@ class TaskView extends React.Component<TaskProps, {}> {
           <table className="ui celled striped table">
             <thead>
               <tr>
-                <th>Timestamp</th>
+                <th width="20%">Timestamp</th>
                 <th>Message</th>
                 <th>Arguments</th>
               </tr>
@@ -229,11 +230,11 @@ class TaskView extends React.Component<TaskProps, {}> {
           </table>
 
           {
-            log.task.stack ?
+            log.err && log.err.stack ?
               <div>
                 <div className="ui header">Stack Trace</div>
                 <div className="ui segment">
-                  { log.task.stack }
+                  { log.err.stack }
                 </div>
               </div>
             : ""
