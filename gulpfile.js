@@ -32,7 +32,7 @@ gulp.task('copy-bigsemantics-core', [ 'compile-bigsemantics-core' ], function() 
 
 gulp.task('compile', [ 'copy-bigsemantics-core' ], function() {
   var tsProject = ts.createProject('tsconfig.json');
-  return gulp.src('src/**/*.ts', { base: 'src' }).pipe(sourcemaps.init()).pipe(tsProject({
+  return gulp.src('src/**/*.ts*', { base: 'src' }).pipe(sourcemaps.init()).pipe(tsProject({
     rootDir: '.',
   })).js.pipe(rename(function(path) {
     if (path.dirname.substr(0, 4) === 'src/') {
